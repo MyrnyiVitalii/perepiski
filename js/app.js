@@ -10,18 +10,34 @@ import { t } from './i18n.js';
 const root = document.getElementById('app');
 let records = [];
 
-// Демо-история лежит в папке demo вместе с картинками
-async function loadDemo() {
+// Встроенная история: папка с story.txt и assets.json (картинки рядом).
+// Демо лежит в папке demo, остальные истории — в stories/<папка>, список в stories/index.json
+async function loadBundled(id, folder, isDemo) {
   const [text, map] = await Promise.all([
-    fetch('demo/story.txt', { cache: 'no-cache' }).then((r) => r.text()),
-    fetch('demo/assets.json', { cache: 'no-cache' }).then((r) => r.json()),
+    fetch(folder + '/story.txt', { cache: 'no-cache' }).then((r) => r.text()),
+    fetch(folder + '/assets.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
   ]);
   const { story, errors } = parseStory(text);
-  if (errors.length) console.warn('Ошибки в демо-истории', errors);
+  if (errors.length) console.warn('Ошибки в истории ' + id, errors);
   return {
-    id: 'demo', isDemo: true, story, errors, sig: textSig(text),
-    resolve: (file) => (file && map[file] ? 'demo/' + map[file] : ''),
+    id, isDemo, story, errors, sig: textSig(text),
+    resolve: (file) => (file && map[file] ? folder + '/' + map[file] : ''),
   };
+}
+
+const loadDemo = () => loadBundled('demo', 'demo', true);
+
+async function loadStoryList() {
+  try {
+    const list = await fetch('stories/index.json', { cache: 'no-cache' }).then((r) => r.json());
+    const out = [];
+    for (const s of list) {
+      try { out.push(await loadBundled(s.id, 'stories/' + s.folder, false)); } catch (e) { console.error(e); }
+    }
+    return out;
+  } catch (e) {
+    return [];
+  }
 }
 
 // «Отпечаток» текста истории: если историю поменяли, старый прогресс не подойдёт
@@ -56,6 +72,7 @@ async function route() {
 async function start() {
   await loadSettings();
   askPersistent();
+  records.push(...(await loadStoryList()));
   try {
     records.push(await loadDemo());
   } catch (e) {
