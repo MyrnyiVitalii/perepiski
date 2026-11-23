@@ -104,6 +104,8 @@ export default {
   setEmoji: 'Смайлики в сообщениях',
   setManualTyping: 'Свой ответ печатать самой (подсказка в поле ввода)',
   send: 'Отправить',
+  typeFirst: 'Сначала напишите сообщение',
+  backToChoices: 'Назад к вариантам',
   setPhotos: 'Фото в чате',
   setVideos: 'Видео в чате',
   video: 'Видео',

@@ -75,6 +75,7 @@ export class Engine {
       scene: s.scene, index: s.index, flags: { ...s.flags }, trust: { ...s.trust },
       time: s.time, nextTyping: s.nextTyping, logLen: s.log.length,
       atChoice: s.atChoice, ended: s.ended, seq: s.seq, bg: s.bg || '', pinned: s.pinned ?? null,
+      composing: s.composing ?? null,
     });
     if (this.snapshots.length > MAX_SNAPSHOTS) this.snapshots.shift();
   }
@@ -84,7 +85,7 @@ export class Engine {
     Object.assign(s, {
       scene: snap.scene, index: snap.index, flags: { ...snap.flags }, trust: { ...snap.trust },
       time: snap.time, nextTyping: snap.nextTyping, atChoice: snap.atChoice, ended: snap.ended, seq: snap.seq,
-      bg: snap.bg || '', pinned: snap.pinned ?? null,
+      bg: snap.bg || '', pinned: snap.pinned ?? null, composing: snap.composing ?? null,
     });
     s.log.length = snap.logLen;
   }

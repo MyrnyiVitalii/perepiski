@@ -510,3 +510,5 @@ body.no-avatars .row .ava { display: none; }
   color: var(--list-text); caret-color: var(--accent); max-height: 120px; overflow-y: auto; -webkit-user-select: text; user-select: text; }
 button.send-btn { border: 0; cursor: pointer; align-self: flex-end; margin-bottom: 3px; }
 button.send-btn.ready { animation: none; }
+button.back-to-choices { color: var(--accent); border: 0; background: none; cursor: pointer; }
+button.back-to-choices svg { width: 24px; height: 24px; }

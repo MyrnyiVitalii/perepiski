@@ -26,13 +26,13 @@ export const settings = {
   vibration: true,  // вибрация на страшных моментах
   customSounds: [], // имена своих загруженных звуков
   sceneBgs: true,   // фоны сцен из истории ([фон ...])
-  recording: false, // режим съёмки
 };
 
 export async function loadSettings() {
   try {
     const s = await db.get('settings', 'main');
     if (s) Object.assign(settings, s);
+    delete settings.recording;
   } catch (e) { /* первый запуск */ }
   applySettings();
 }
@@ -46,7 +46,6 @@ export function applySettings() {
   applyTheme(settings.theme);
   document.body.classList.toggle('no-time', !settings.showTime);
   document.body.classList.toggle('no-avatars', !settings.showAvatars);
-  document.body.classList.toggle('recording', !!settings.recording);
   document.title = settings.appName;
 }
 
