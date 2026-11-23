@@ -3,6 +3,8 @@
 
 const base = {
   '--r': '16px', '--rc': '16px', '--bubble-opacity': '1',
+  // цвета имён в группе, как в Telegram (тёмные темы); светлые темы ниже переопределяют их
+  '--peer-0': '#E88878', '--peer-1': '#E8AB5A', '--peer-2': '#8C8DEA', '--peer-3': '#7DD071', '--peer-4': '#53CCC6', '--peer-5': '#5CADEA', '--peer-6': '#E8749A',
 };
 
 export const THEMES = {
@@ -27,6 +29,7 @@ export const THEMES = {
       '--header-bg': '#517da2', '--header-text': '#ffffff', '--header-sub': 'rgba(255,255,255,.75)', '--icon': '#ffffff', '--accent': '#3a8fd6',
       '--bottom-bg': '#ffffff', '--bottom-text': '#9aa4ad', '--bottom-icon': '#8a97a3',
       '--list-text': '#1c1c1c', '--list-sub': '#8a8a8a',
+      '--peer-0': '#CC5049', '--peer-1': '#D67722', '--peer-2': '#955CDB', '--peer-3': '#40A920', '--peer-4': '#309EBA', '--peer-5': '#368AD1', '--peer-6': '#C7508B',
       '--in-bg': '#ffffff', '--in-text': '#111111', '--out-bg': '#effedd', '--out-text': '#111111',
       '--meta': '#a0acb6', '--out-meta': '#5fa95f', '--sys-bg': 'rgba(60,90,50,.45)', '--sys-text': '#ffffff',
       '--choice-bg': '#517da2', '--choice-text': '#ffffff', '--choice-sub': 'rgba(255,255,255,.8)', '--choice-border': 'rgba(0,0,0,.06)',
@@ -55,6 +58,7 @@ export const THEMES = {
       '--header-bg': '#d9578e', '--header-text': '#ffffff', '--header-sub': 'rgba(255,255,255,.8)', '--icon': '#ffffff', '--accent': '#d9578e',
       '--bottom-bg': '#ffffff', '--bottom-text': '#c79aae', '--bottom-icon': '#d07aa0',
       '--list-text': '#3a2330', '--list-sub': '#a07d8e',
+      '--peer-0': '#CC5049', '--peer-1': '#D67722', '--peer-2': '#955CDB', '--peer-3': '#40A920', '--peer-4': '#309EBA', '--peer-5': '#368AD1', '--peer-6': '#C7508B',
       '--in-bg': '#ffffff', '--in-text': '#3a2330', '--out-bg': '#ffd1e3', '--out-text': '#3a2330',
       '--meta': '#c098aa', '--out-meta': '#c9628f', '--sys-bg': 'rgba(180,60,110,.45)', '--sys-text': '#ffffff',
       '--choice-bg': '#d9578e', '--choice-text': '#ffffff', '--choice-sub': 'rgba(255,255,255,.85)', '--choice-border': 'rgba(0,0,0,.05)',

@@ -41,8 +41,20 @@ export async function openChat(root, rec, { onExit, onNext }) {
     if (u) custom.set(name, u);
   }
   const char = (name) => story.characters[name] || { name, color: '#90a4ae', avatar: '', about: '' };
+  // Цвет имени — один из 7 цветов Telegram (красный, оранжевый, фиолетовый, зелёный, голубой, синий, розовый).
+  // В шапке истории можно написать «цвет: голубой»; если там HEX-цвет — цвет из Telegram выдаётся по порядку героев.
+  const PEER_NAMES = { 'красный': 0, red: 0, 'оранжевый': 1, orange: 1, 'фиолетовый': 2, violet: 2, purple: 2, 'зелёный': 3, 'зеленый': 3, green: 3,
+    'голубой': 4, cyan: 4, 'бирюзовый': 4, 'синий': 5, blue: 5, 'розовый': 6, pink: 6 };
+  const AUTO_ORDER = [5, 3, 6, 1, 2, 4, 0];
+  const nameColor = (name) => {
+    const c = char(name);
+    const key = String(c.color || '').trim().toLowerCase();
+    if (key in PEER_NAMES) return `var(--peer-${PEER_NAMES[key]})`;
+    const i = Math.max(0, story.charOrder.indexOf(name));
+    return `var(--peer-${AUTO_ORDER[i % 7]})`;
+  };
   const avaUrl = (name) => custom.get(name) || resolve(char(name).avatar);
-  const avaOf = (name) => { const c = char(name); return avatar(avaUrl(name), c.name, c.color); };
+  const avaOf = (name) => { const c = char(name); return avatar(avaUrl(name), c.name, nameColor(name)); };
   const chatAvaUrl = () => custom.get(CHAT_KEY) || resolve(story.chatAvatar);
   const headAvatar = () => (story.isGroup
     ? avatar(chatAvaUrl(), story.chatTitle, '#5c6bc0')
@@ -182,8 +194,8 @@ export async function openChat(root, rec, { onExit, onNext }) {
     const it = engine.state.log.find((x) => x.id === id);
     if (!it) return null;
     const c = char(it.who);
-    return h('div', { class: 'quote', style: { borderColor: c.color }, onclick: (e) => { e.stopPropagation(); jumpTo(id); } },
-      h('div', { class: 'q-name', style: { color: c.color } }, it.who),
+    return h('div', { class: 'quote', style: { borderColor: nameColor(it.who) }, onclick: (e) => { e.stopPropagation(); jumpTo(id); } },
+      h('div', { class: 'q-name', style: { color: nameColor(it.who) } }, it.who),
       h('div', { class: 'q-text' }, emo(snippet({ ...it, text: textOf(it) }))));
   }
 
@@ -254,7 +266,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     if (!item.me && story.isGroup) row.append(runEnd ? avaOf(item.who) : h('div', { class: 'ava spacer' }));
 
     const c = char(item.who);
-    const nameEl = (!item.me && story.isGroup && runStart) ? h('div', { class: 'name', style: { color: c.color } }, item.who) : null;
+    const nameEl = (!item.me && story.isGroup && runStart) ? h('div', { class: 'name', style: { color: nameColor(item.who) } }, item.who) : null;
     // «Переслано от …» и цитата ответа — над текстом, как в Telegram
     const fwdEl = item.forwarded ? h('div', { class: 'fwd' }, t('forwardedFrom'), h('b', {}, item.forwarded)) : null;
     const replyId = item.reply ?? engine.state.myReply?.[item.id];
@@ -442,8 +454,8 @@ export async function openChat(root, rec, { onExit, onNext }) {
     const c = char(it.who);
     replyBar.replaceChildren(
       h('span', { class: 'rb-icon', html: ICONS.reply }),
-      h('div', { class: 'rb-body', style: { borderColor: c.color } },
-        h('div', { class: 'q-name', style: { color: c.color } }, t('replyTo', { name: it.who })),
+      h('div', { class: 'rb-body', style: { borderColor: nameColor(it.who) } },
+        h('div', { class: 'q-name', style: { color: nameColor(it.who) } }, t('replyTo', { name: it.who })),
         h('div', { class: 'q-text' }, emo(snippet({ ...it, text: textOf(it) })))),
       h('button', { type: 'button', class: 'rb-close', onclick: () => { replyTo = null; drawReplyBar(); } }, '✕'));
     replyBar.classList.add('on');
@@ -501,7 +513,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
           return h('button', { type: 'button', class: 'member', onclick: () => { s.close(); openProfile(name); } },
             avaOf(name),
             h('div', { class: 'm-body' },
-              h('div', { class: 'm-name', style: { color: c.color } }, name + (name === story.me ? ` (${t('you')})` : '')),
+              h('div', { class: 'm-name', style: { color: nameColor(name) } }, name + (name === story.me ? ` (${t('you')})` : '')),
               h('div', { class: 'm-about' }, emo(c.about || ''))));
         })),
     );
@@ -683,9 +695,17 @@ export async function openChat(root, rec, { onExit, onNext }) {
     introOn = true;
     showIntro(story, async () => {
       introOn = false;
-      // после заставки сами доходим до первого сообщения (дата, [фон], «печатает…» — без нажатий)
+      // после заставки сами показываем начало
       await onTap(true);
-      for (let i = 0; i < 8 && !list.querySelector('.row:not(.typing-row)') && !engine.state.atChoice && engine.state.ended === null; i++) await onTap();
+      // Хук в начале показываем целиком сам: сообщения первой сцены до второй плашки с датой
+      // («За шесть часов до этого») — но не больше 6 сообщений и до первого выбора
+      const firstScene = story.sceneOrder[0];
+      const count = (t) => engine.state.log.filter((x) => x.t === t).length;
+      for (let i = 0; i < 20; i++) {
+        if (engine.state.atChoice || engine.state.ended !== null || engine.state.scene !== firstScene) break;
+        if (count('date') >= 2 || count('msg') >= 6) break;
+        await onTap();
+      }
     });
   }
 
@@ -931,7 +951,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     if (story.isGroup) heroes.append(heroRow(CHAT_KEY, t('chatPhoto'), '#5c6bc0', chatAvaUrl()));
     for (const name of story.charOrder) {
       const c = char(name);
-      heroes.append(heroRow(name, name, c.color, avaUrl(name)));
+      heroes.append(heroRow(name, name, nameColor(name), avaUrl(name)));
     }
     heroes.append(h('div', { class: 'set-hint small' }, LIMITS.avatar.hint));
     const content = h('div', {},
@@ -956,7 +976,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
       box.append(h('button', { class: 'trust-item', type: 'button', onclick: () => { s.close(); openProfile(name); } },
         avaOf(name),
         h('div', { class: 'trust-body' },
-          h('div', { class: 'trust-name', style: { color: c.color } }, name),
+          h('div', { class: 'trust-name', style: { color: nameColor(name) } }, name),
           h('div', { class: 'bar' }, h('i', { style: barStyle(v) }))),
         h('div', { class: 'trust-val' }, `${v}/10`)));
     }
@@ -970,7 +990,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     big.addEventListener('click', () => { const u = avaUrl(name); if (u) viewer(u); });
     const s = sheet(h('div', { class: 'profile' },
       big,
-      h('div', { class: 'p-name', style: { color: c.color } }, name),
+      h('div', { class: 'p-name', style: { color: nameColor(name) } }, name),
       h('button', { type: 'button', class: 'btn-small', onclick: async () => {
         if (await changePhoto(name)) { s.close(); openProfile(name); }
       } }, t('changePhoto')),
