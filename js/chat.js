@@ -358,7 +358,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     const W = () => chat.clientWidth;
     chat.addEventListener('pointerdown', (e) => {
       if (!e.isPrimary || e.button > 0) return;
-      if (e.target.closest('.sheet-back, .menu-back, .choices button, .start-zone, input')) return;
+      if (e.target.closest('.sheet-back, .menu-back, .choices button, .start-zone, input, textarea, .input-wrap, .send-btn')) return;
       const holder = e.target.closest('.bubble[data-id], .sticker[data-id]');
       g = { x: e.clientX, y: e.clientY, t: performance.now(), holder, mode: null, dx: 0 };
       if (holder) g.timer = setTimeout(() => { if (g && !g.mode) { const h_ = g.holder; g = null; openReactPicker(h_); } }, LONG_PRESS);
@@ -652,6 +652,41 @@ export async function openChat(root, rec, { onExit, onNext }) {
     if (isFresh()) {
       bottom.replaceChildren(h('div', { class: 'start-zone' },
         h('button', { class: 'start-btn', type: 'button', onclick: () => onTap(true) }, t('start'))));
+    } else if (choice && choice.options.length === 1 && choice.options[0].text && settings.manualTyping) {
+      // Один вариант, Ира печатает сама: нужная фраза бледно видна в поле, напечатанное её закрывает,
+      // отправка — кнопкой «Отправить» (или Enter). В чат уходит то, что напечатано, даже с ошибками.
+      const opt = choice.options[0];
+      const target = emo(opt.text).replace(/\*\*|__|~~|\|\|!?/g, '');
+      const ghostTyped = h('span', { class: 'ghost-typed' });
+      const ghostRest = h('span', { class: 'ghost-rest' }, target);
+      const ghost = h('div', { class: 'ghost' }, ghostTyped, ghostRest);
+      const input = h('textarea', { class: 'real-input', rows: '1', autocomplete: 'off', autocorrect: 'off', spellcheck: 'false',
+        enterkeyhint: 'send', 'aria-label': target });
+      const send = h('button', { type: 'button', class: 'send-btn', 'aria-label': t('send'), html: ICONS.send });
+      const wrap = h('div', { class: 'input-wrap' }, ghost, input);
+      const bar = h('div', { class: 'inputbar choice-zone single manual' }, h('div', { class: 'ib', html: ICONS.smile }), wrap, send);
+      bottom.replaceChildren(opt.desc ? h('div', { class: 'single-desc' }, `(${emo(opt.desc)})`) : '', bar);
+      const sync = () => {
+        const v = input.value;
+        ghostTyped.textContent = v;
+        ghostRest.textContent = target.slice(v.length);
+        send.classList.toggle('ready', v.trim().length > 0);
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+        if (nearBottom()) scrollDown(false);
+      };
+      const doSend = () => {
+        const v = input.value.trim();
+        if (!v) { pulse(bar); input.focus(); return; }
+        input.blur();
+        choose(0, v);
+      };
+      input.addEventListener('input', sync);
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } });
+      send.addEventListener('click', doSend);
+      // нажатие в любое место панели — открыть клавиатуру
+      bar.addEventListener('click', (e) => { if (e.target !== send && !send.contains(e.target)) input.focus(); });
+      sync();
     } else if (choice && choice.options.length === 1 && choice.options[0].text) {
       // Один вариант: текст сам «печатается» в поле ввода, нажатие — отправить
       const opt = choice.options[0];
@@ -786,9 +821,9 @@ export async function openChat(root, rec, { onExit, onNext }) {
     el.classList.remove('nudge'); void el.offsetWidth; el.classList.add('nudge');
   }
 
-  function choose(i) {
+  function choose(i, typed) {
     if (typing || busy) return;
-    const ctx = engine.choose(i);
+    const ctx = engine.choose(i, typed);
     if (!ctx) return;
     // если перед этим смахнули сообщение — мой ответ будет с цитатой
     if (ctx.item && replyTo) ctx.item.reply = replyTo;

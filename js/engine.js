@@ -273,14 +273,16 @@ export class Engine {
   }
 
   // Нажата кнопка выбора
-  choose(i) {
+  // typed — то, что Ира напечатала сама (если печатала вручную); уходит в чат вместо текста из истории
+  choose(i, typed) {
     const node = this.currentChoice();
     if (!node) return null;
     const opt = node.options[i];
     this.pushSnap();
     const ctx = { effects: [], sounds: [], toasts: [], vibro: [], item: null, bgChanged: false };
-    if (opt.text) {
-      ctx.item = this.makeItem({ t: 'msg', who: this.story.me, me: true, kind: 'text', text: opt.text, file: '' });
+    const text = typed && typed.trim() ? typed.trim() : opt.text;
+    if (text) {
+      ctx.item = this.makeItem({ t: 'msg', who: this.story.me, me: true, kind: 'text', text, file: '' });
       this.state.log.push(ctx.item);
     }
     for (const tr of opt.trust) this.applyTrust(tr.who, tr.delta, ctx);
