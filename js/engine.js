@@ -9,8 +9,9 @@ export function nowTime() {
 }
 
 export class Engine {
-  constructor(story, saved) {
+  constructor(story, saved, carry = null) {
     this.story = story;
+    this.carry = carry; // доверие и «запомненное» из прошлой серии
     if (saved && saved.state && story.scenes[saved.state.scene]) {
       this.state = saved.state;
       this.snapshots = saved.snapshots || [];
@@ -22,10 +23,15 @@ export class Engine {
   freshState() {
     const trust = {};
     for (const name of this.story.charOrder) trust[name] = this.story.characters[name].trust;
+    let flags = {};
+    if (this.carry) {
+      for (const [name, v] of Object.entries(this.carry.trust || {})) if (name in trust) trust[name] = v;
+      flags = { ...(this.carry.flags || {}) };
+    }
     return {
       scene: this.story.sceneOrder[0], index: 0,
-      flags: {}, trust, time: '', nextTyping: null,
-      log: [], atChoice: false, ended: null, seq: 0,
+      flags, trust, time: '', nextTyping: null, bg: '',
+      log: [], atChoice: false, ended: null, seq: 0, myReact: {},
     };
   }
 
@@ -57,7 +63,7 @@ export class Engine {
     this.snapshots.push({
       scene: s.scene, index: s.index, flags: { ...s.flags }, trust: { ...s.trust },
       time: s.time, nextTyping: s.nextTyping, logLen: s.log.length,
-      atChoice: s.atChoice, ended: s.ended, seq: s.seq,
+      atChoice: s.atChoice, ended: s.ended, seq: s.seq, bg: s.bg || '',
     });
     if (this.snapshots.length > MAX_SNAPSHOTS) this.snapshots.shift();
   }
@@ -67,6 +73,7 @@ export class Engine {
     Object.assign(s, {
       scene: snap.scene, index: snap.index, flags: { ...snap.flags }, trust: { ...snap.trust },
       time: snap.time, nextTyping: snap.nextTyping, atChoice: snap.atChoice, ended: snap.ended, seq: snap.seq,
+      bg: snap.bg || '',
     });
     s.log.length = snap.logLen;
   }
@@ -133,6 +140,15 @@ export class Engine {
       case 'typing': s.nextTyping = node.sec; return 'next';
       case 'sound': ctx.sounds.push(node.name); return 'next';
       case 'effect': ctx.effects.push(node.name); return 'next';
+      case 'vibrate': ctx.vibro.push(node.pattern); return 'next';
+      case 'bg': s.bg = node.file; ctx.bgChanged = true; return 'next';
+      case 'react': {
+        // реакция ставится на последнее сообщение в ленте
+        let target = null;
+        for (let i = s.log.length - 1; i >= 0; i--) if (s.log[i].t === 'msg') { target = s.log[i].id; break; }
+        if (target == null) return 'next';
+        return this.makeItem({ t: 'react', who: node.who, emoji: node.emoji, target });
+      }
       case 'trust': this.applyTrust(node.who, node.delta, ctx); return 'next';
       case 'flag':
         if (node.on) s.flags[node.name] = true; else delete s.flags[node.name];
@@ -176,7 +192,7 @@ export class Engine {
     const s = this.state;
     if (s.ended !== null || s.atChoice) return null;
     this.pushSnap();
-    const ctx = { effects: [], sounds: [], toasts: [], typing: 0, typingWho: '', item: null, choice: false };
+    const ctx = { effects: [], sounds: [], toasts: [], vibro: [], typing: 0, typingWho: '', item: null, choice: false, bgChanged: false };
     for (let guard = 0; guard < 20000; guard++) {
       const node = this.current();
       if (!node) {
@@ -217,7 +233,7 @@ export class Engine {
     if (!node) return null;
     const opt = node.options[i];
     this.pushSnap();
-    const ctx = { effects: [], sounds: [], toasts: [], item: null };
+    const ctx = { effects: [], sounds: [], toasts: [], vibro: [], item: null, bgChanged: false };
     if (opt.text) {
       ctx.item = this.makeItem({ t: 'msg', who: this.story.me, me: true, kind: 'text', text: opt.text, file: '' });
       this.state.log.push(ctx.item);

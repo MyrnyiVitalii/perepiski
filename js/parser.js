@@ -12,6 +12,8 @@ const HEADER_KEYS = {
   'тип': 'type',
   'я': 'me',
   'язык': 'lang',
+  'сериал': 'series',
+  'серия': 'episode',
 };
 
 export function parseStory(text) {
@@ -186,6 +188,17 @@ export function parseStory(text) {
   story.isGroup = story.type.toLowerCase().startsWith('гр');
   if (!story.chatTitle) story.chatTitle = story.isGroup ? story.title : (story.others[0] || story.title);
 
+  // Серии: «Сериал: Зевинск» + «Серия: 2», или название вида «Зевинск. Серия 2: Вежливые»
+  if (!story.series || !story.episode) {
+    const sm2 = story.title.match(/^(.*?)[\s.,:—-]*серия\s*(\d+)/i);
+    if (sm2 && sm2[1].trim()) {
+      story.series = story.series || sm2[1].trim();
+      story.episode = story.episode || sm2[2];
+    }
+  }
+  story.episode = parseInt(story.episode, 10) || 0;
+  if (!story.episode) story.series = '';
+
   return { story, errors };
 }
 
@@ -244,6 +257,17 @@ function parseSceneLine(line, ln, err) {
       case 'запомнить': return { t: 'flag', name: arg, on: true, line: ln };
       case 'забыть': return { t: 'flag', name: arg, on: false, line: ln };
       case 'конец': return { t: 'end', title: arg, line: ln };
+      case 'вибрация': {
+        const ms = parseInt(arg, 10);
+        return { t: 'vibrate', pattern: ms > 0 ? [Math.min(ms, 3000)] : [400, 150, 400], line: ln };
+      }
+      case 'фон': return { t: 'bg', file: /^нет$/i.test(arg) ? '' : arg, line: ln };
+      case 'реакция': {
+        // [реакция Аня 😱] — последний «кусок» строки это эмодзи, перед ним имя
+        const rm = arg.match(/^(.+?)\s+(\S+)$/u);
+        if (!rm) { err(ln, 'Нужно «[реакция Имя 😱]»'); return null; }
+        return { t: 'react', who: rm[1].trim(), emoji: rm[2], line: ln };
+      }
       default:
         err(ln, `Неизвестная команда «[${m[1]}]»`);
         return null;

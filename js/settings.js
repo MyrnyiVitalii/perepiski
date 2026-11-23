@@ -19,6 +19,12 @@ export const settings = {
   showEmoji: true,  // смайлики в сообщениях
   showPhotos: true, // фото в чате
   showVideos: true, // видео в чате
+  sound: true,      // все звуки
+  msgSounds: true,  // звуки сообщений (пришло / отправлено / набор)
+  volume: 80,       // громкость 0–100
+  vibration: true,  // вибрация на страшных моментах
+  customSounds: [], // имена своих загруженных звуков
+  sceneBgs: true,   // фоны сцен из истории ([фон ...])
   recording: false, // режим съёмки
 };
 
@@ -135,6 +141,51 @@ export function togglesSection(onChange) {
     toggleRow(t('setEmoji'), 'showEmoji', onChange),
     toggleRow(t('setPhotos'), 'showPhotos', onChange),
     toggleRow(t('setVideos'), 'showVideos', onChange),
+    toggleRow(t('setSceneBgs'), 'sceneBgs', onChange),
+  );
+}
+
+// Звук и вибрация: переключатели, громкость, проверка звуков, свои звуки
+export async function soundSection() {
+  const snd = await import('./sounds.js');
+  const listBox = h('div', { class: 'sound-list' });
+  const drawList = () => {
+    listBox.replaceChildren();
+    for (const name of [...snd.BUILTIN_SOUNDS, ...(settings.customSounds || [])]) {
+      const own = (settings.customSounds || []).includes(name);
+      listBox.append(h('span', { class: 'sound-chip' + (own ? ' own' : '') },
+        h('button', { type: 'button', onclick: () => snd.play(name) }, '▶ ' + name),
+        own ? h('button', { type: 'button', class: 'x', onclick: async () => { await snd.removeCustomSound(name); await saveSettings(); drawList(); } }, '✕') : null));
+    }
+  };
+  drawList();
+  const nameIn = h('input', { class: 'set-input', type: 'text', placeholder: t('soundNamePh'), maxlength: '30' });
+  const add = h('button', { type: 'button', class: 'btn-small', onclick: async () => {
+    const file = await new Promise((resolve) => {
+      const input = h('input', { type: 'file', accept: 'audio/*,.mp3,.ogg,.wav,.m4a', style: { display: 'none' } });
+      input.addEventListener('change', () => { resolve(input.files[0] || null); input.remove(); });
+      document.body.append(input); input.click();
+    });
+    if (!file) return;
+    try {
+      await snd.addCustomSound(nameIn.value || file.name.replace(/\.[^.]+$/, ''), file);
+      await saveSettings();
+      nameIn.value = '';
+      drawList();
+      flashMsg(t('soundAdded'));
+    } catch (e) { flashMsg(e.message, 4000); }
+  } }, t('soundAdd'));
+  return h('div', { class: 'set-block' },
+    h('div', { class: 'set-title' }, t('setSound')),
+    toggleRow(t('setSoundOn'), 'sound'),
+    toggleRow(t('setMsgSounds'), 'msgSounds'),
+    toggleRow(t('setVibration'), 'vibration'),
+    slider(t('setVolume'), 'volume', 0, 100),
+    h('div', { class: 'set-hint small' }, t('soundTry')),
+    listBox,
+    h('div', { class: 'set-hint small' }, t('soundOwnHint')),
+    nameIn,
+    h('div', { class: 'btn-row', style: { marginTop: '8px' } }, add),
   );
 }
 
@@ -169,5 +220,7 @@ export function openSettings(onChange) {
     togglesSection(onChange),
   );
   const s = sheet(content);
-  content.append(h('button', { class: 'btn-wide', type: 'button', onclick: () => s.close() }, t('close')));
+  const closeBtn = h('button', { class: 'btn-wide', type: 'button', onclick: () => s.close() }, t('close'));
+  content.append(closeBtn);
+  soundSection().then((sec) => content.insertBefore(sec, closeBtn));
 }

@@ -62,7 +62,10 @@ async function route() {
     const rec = records.find((r) => r.id === decodeURIComponent(m[1]));
     if (rec) {
       if (rec.errors.length && !rec.isDemo) { showErrors(rec); return; }
-      await openChat(root, rec, { onExit: () => { location.hash = ''; } });
+      await openChat(root, rec, {
+        onExit: () => { location.hash = ''; },
+        onNext: (id) => { location.hash = '#chat/' + encodeURIComponent(id); },
+      });
       return;
     }
   }
@@ -78,8 +81,19 @@ async function start() {
   } catch (e) {
     console.error(e);
   }
+  linkSeries(records);
   window.addEventListener('hashchange', route);
   await route();
+}
+
+// Серии одного сериала: у каждой серии запоминаем следующую (для кнопки «Следующая серия»)
+function linkSeries(list) {
+  for (const r of list) {
+    const s = r.story;
+    if (!s.series) continue;
+    const next = list.find((x) => x.story.series && x.story.series.toLowerCase() === s.series.toLowerCase() && x.story.episode === s.episode + 1);
+    r.next = next ? next.id : null;
+  }
 }
 
 start();
