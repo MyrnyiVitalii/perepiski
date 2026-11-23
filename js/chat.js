@@ -585,7 +585,13 @@ export async function openChat(root, rec, { onExit, onNext }) {
   }
 
   // То, что рисуется отдельной строкой в ленте (реакции рисуются на сообщениях)
-  const rowItems = () => engine.state.log.filter((it) => it.t !== 'react' && it.t !== 'edit' && !hiddenBySettings(it));
+  // После метки «очистить чат» рисуется только то, что было после неё
+  const visibleLog = () => {
+    const log = engine.state.log;
+    for (let i = log.length - 1; i >= 0; i--) if (log[i].t === 'clear') return log.slice(i + 1);
+    return log;
+  };
+  const rowItems = () => visibleLog().filter((it) => it.t !== 'react' && it.t !== 'edit' && it.t !== 'clear' && !hiddenBySettings(it));
 
   // Перерисовать одно сообщение на месте (после исправления текста)
   function redrawRow(id, flash) {
@@ -704,10 +710,17 @@ export async function openChat(root, rec, { onExit, onNext }) {
       const pause = (ms) => new Promise((r) => setTimeout(r, ms));
       const myGen = gen;
       for (let i = 0; i < 20; i++) {
-        if (engine.state.atChoice || engine.state.ended !== null || engine.state.scene !== firstScene) break;
-        if (count('msg') >= 6) break;
         const last = engine.state.log[engine.state.log.length - 1];
-        await pause(last && last.t === 'date' ? 1600 : 1100);
+        if (engine.state.atChoice || engine.state.ended !== null) break;
+        // в новой сцене останавливаемся на её первом сообщении (до него – плашка с датой, она не в счёт)
+        if (engine.state.scene !== firstScene && last && last.t !== 'date') break;
+        if (engine.state.scene === firstScene && count('msg') >= 6) break;
+        // перед сменой сцены (дальше в этой сцене только переход) – пауза длиннее, чтобы хук «повисел»
+        const sc = story.scenes[engine.state.scene];
+        let k = engine.state.index;
+        while (sc && k < sc.items.length && !['msg', 'date', 'system', 'choice', 'jump', 'end'].includes(sc.items[k].t)) k++;
+        const sceneEnds = !sc || k >= sc.items.length || sc.items[k].t === 'jump';
+        await pause(last && last.t === 'date' ? 1600 : sceneEnds ? 2000 : 1100);
         if (myGen !== gen) return;
         await onTap();
       }
@@ -794,6 +807,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
         for (const k of ['effects', 'toasts', 'sounds', 'vibro']) more[k] = [...ctx[k], ...more[k]];
         more.bgChanged = more.bgChanged || ctx.bgChanged;
         more.transition = more.transition || ctx.transition;
+        more.cleared = more.cleared || ctx.cleared;
         ctx = more;
       }
     } catch (e) { flashMsg(e.message, 4000); return; }
@@ -805,10 +819,14 @@ export async function openChat(root, rec, { onExit, onNext }) {
     try {
       // Переход между сценами: затемнение с местом и временем, фон меняется, пока экран чёрный.
       // Показывается всегда (правило Иры 23.11.2026), даже если заставка серии выключена в настройках.
+      const clearFeed = () => { if (ctx.cleared) { rows.clear(); list.replaceChildren(); drawPinBar(); } };
       if (ctx.transition) {
-        await showTransition(ctx.transition, () => { if (ctx.bgChanged) applySceneBg(true); });
+        await showTransition(ctx.transition, () => { clearFeed(); if (ctx.bgChanged) applySceneBg(true); });
         if (myGen !== gen) return;
-      } else if (ctx.bgChanged) applySceneBg(false);
+      } else {
+        clearFeed();
+        if (ctx.bgChanged) applySceneBg(false);
+      }
       if (ctx.item) {
         const it = ctx.item;
         // «печатает…» — только где оно стоит в истории, и до следующего нажатия

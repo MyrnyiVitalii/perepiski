@@ -168,6 +168,8 @@ export class Engine {
       case 'vibrate': ctx.vibro.push(node.pattern); return 'next';
       case 'bg': s.bg = node.file; ctx.bgChanged = true; return 'next';
       case 'transition': ctx.transition = node.text; return 'next';
+      // Очистка ленты: метка в журнале, всё до неё больше не рисуется (откат назад её убирает)
+      case 'clear': s.log.push(this.makeItem({ t: 'clear' })); s.pinned = null; ctx.cleared = true; return 'next';
       case 'react': {
         // реакция ставится на последнее сообщение в ленте
         let target = null;

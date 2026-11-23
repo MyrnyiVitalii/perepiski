@@ -34,7 +34,8 @@ export function showTransition(text, onDark) {
     box.addEventListener('click', () => { if (onDark) { onDark(); onDark = null; } finish(); });
     document.body.append(box);
     timers.push(setTimeout(() => { if (onDark) { onDark(); onDark = null; } }, 400));
-    timers.push(setTimeout(finish, reduce ? 900 : 1700));
+    // длинный текст («За шесть часов до этого · Школьный автобус · 15:47») держим дольше, чтобы успели прочитать
+    timers.push(setTimeout(finish, reduce ? 900 : String(text || '').length > 24 ? 2700 : 1700));
   });
 }
 

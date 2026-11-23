@@ -651,6 +651,8 @@ button.back-to-choices svg { width: 24px; height: 24px; }
   animation: sc-in .38s ease-out both; -webkit-user-select: none; user-select: none; overflow: hidden; }
 .scene-cut.out { animation: sc-out .38s ease-in forwards; }
 .sc-inner { position: relative; text-align: center; padding: 0 16px; }
+.sc-place { text-wrap: balance; }
+.sc-time { text-transform: uppercase; }
 .sc-place { font: 400 clamp(18px, 5.4vw, 30px)/1.2 'IntroLabel', sans-serif; letter-spacing: .32em; margin-right: -.32em; color: #ebe3d6;
   opacity: 0; animation: sc-text .7s .25s ease-out forwards; }
 .sc-time { margin-top: 12px; font: 400 14px/1 'IntroLabel', sans-serif; letter-spacing: .3em; margin-right: -.3em; color: #a3231b;

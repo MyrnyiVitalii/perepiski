@@ -273,6 +273,8 @@ function parseSceneLine(line, ln, err) {
       case 'фон': return { t: 'bg', file: /^нет$/i.test(arg) ? '' : arg, line: ln };
       // [переход Посёлок Светлый · 16:41] — затемнение между сценами с названием места и временем
       case 'переход': return { t: 'transition', text: arg, line: ln };
+      // [очистить чат] – всё, что было в ленте, исчезает (например, после хука «из будущего» история идёт с начала)
+      case 'очистить': return { t: 'clear', line: ln };
       // [закрепить] или [закрепить Аня] — закрепить последнее сообщение; [открепить]
       case 'закрепить': return { t: 'pin', who: arg, line: ln };
       case 'открепить': return { t: 'unpin', line: ln };
