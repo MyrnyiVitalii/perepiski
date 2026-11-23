@@ -16,7 +16,6 @@ export const settings = {
   trustToast: true,
   showTime: true,
   showAvatars: true,
-  manualTyping: true, // свой ответ (когда вариант один) Ира печатает сама
   showEmoji: true,  // смайлики в сообщениях
   showPhotos: true, // фото в чате
   showVideos: true, // видео в чате
@@ -33,6 +32,7 @@ export async function loadSettings() {
     const s = await db.get('settings', 'main');
     if (s) Object.assign(settings, s);
     delete settings.recording;
+    delete settings.manualTyping; // «печатать самой» убрано 23.11.2026: реплики Иры появляются сами, выбор — кнопками
   } catch (e) { /* первый запуск */ }
   applySettings();
 }
@@ -140,7 +140,6 @@ export function togglesSection(onChange) {
     toggleRow(t('setTrustToast'), 'trustToast', onChange),
     toggleRow(t('setTime'), 'showTime', onChange),
     toggleRow(t('setAvatars'), 'showAvatars', onChange),
-    toggleRow(t('setManualTyping'), 'manualTyping', onChange),
     toggleRow(t('setEmoji'), 'showEmoji', onChange),
     toggleRow(t('setPhotos'), 'showPhotos', onChange),
     toggleRow(t('setVideos'), 'showVideos', onChange),

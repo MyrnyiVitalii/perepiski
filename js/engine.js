@@ -221,8 +221,9 @@ export class Engine {
           const r = this.lastMsg(node.replyTo === 'Я' ? this.story.me : node.replyTo);
           if (r) item.reply = r.id;
         }
-        if (!me) {
-          ctx.typing = s.nextTyping != null ? s.nextTyping : 1 + Math.random();
+        // «печатает…» только там, где в истории стоит [печатает N]; сами сообщения без задержки
+        if (!me && s.nextTyping != null) {
+          ctx.typing = s.nextTyping;
           ctx.typingWho = node.who;
         }
         s.nextTyping = null;

@@ -27,6 +27,8 @@ export async function openChat(root, rec, { onExit, onNext }) {
     try { carry = await db.get('progress', carryKey(story.series, story.episode)); } catch (e) { /* нет */ }
   }
   const engine = new Engine(story, saved, carry);
+  // «Печатать самой» убрано 23.11.2026: если в старом сохранении реплика ждала набора — она уже в чате
+  engine.state.composing = null;
   if (!engine.state.myReact) engine.state.myReact = {};
 
   // Фото, которые пользователь поставил сам, важнее фото из истории
@@ -569,8 +571,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
   }
 
   // То, что рисуется отдельной строкой в ленте (реакции рисуются на сообщениях)
-  const rowItems = () => engine.state.log.filter((it) => it.t !== 'react' && it.t !== 'edit' && !hiddenBySettings(it)
-    && it.id !== engine.state.composing);
+  const rowItems = () => engine.state.log.filter((it) => it.t !== 'react' && it.t !== 'edit' && !hiddenBySettings(it));
 
   // Перерисовать одно сообщение на месте (после исправления текста)
   function redrawRow(id, flash) {
@@ -635,7 +636,6 @@ export async function openChat(root, rec, { onExit, onNext }) {
   new ResizeObserver(() => { if (stick) feed.scrollTop = feed.scrollHeight; }).observe(list);
 
   // ---------- Нижняя панель: Start, поле ввода или кнопки выбора ----------
-  let typeTimer = null;
   const isFresh = () => engine.state.log.length === 0 && engine.state.ended === null && !engine.state.atChoice;
 
   function fakeInputBar(extra = []) {
@@ -647,104 +647,15 @@ export async function openChat(root, rec, { onExit, onNext }) {
       ...extra);
   }
 
-  // Поле ввода, где Ира печатает сама: нужная фраза бледно видна, напечатанное её закрывает,
-  // отправка — кнопкой «Отправить» (или Enter). В чат уходит то, что напечатано, даже с ошибками.
-  // onBack — если есть, слева кнопка «назад к вариантам».
-  function composeBar(text, desc, onSend, onBack) {
-    const target = emo(text).replace(/\*\*|__|~~|\|\|!?/g, '');
-    const ghostTyped = h('span', { class: 'ghost-typed' });
-    const ghostRest = h('span', { class: 'ghost-rest' }, target);
-    const ghost = h('div', { class: 'ghost' }, ghostTyped, ghostRest);
-    const input = h('textarea', { class: 'real-input', rows: '1', autocomplete: 'off', autocorrect: 'off', spellcheck: 'false',
-      enterkeyhint: 'send', 'aria-label': target });
-    const send = h('button', { type: 'button', class: 'send-btn', 'aria-label': t('send'), html: ICONS.send });
-    const left = onBack
-      ? h('button', { type: 'button', class: 'ib back-to-choices', 'aria-label': t('backToChoices'), html: ICONS.back, onclick: (e) => { e.stopPropagation(); onBack(); } })
-      : h('div', { class: 'ib', html: ICONS.smile });
-    const wrap = h('div', { class: 'input-wrap' }, ghost, input);
-    const bar = h('div', { class: 'inputbar choice-zone single manual' }, left, wrap, send);
-    bottom.replaceChildren(desc ? h('div', { class: 'single-desc' }, `(${emo(desc)})`) : '', bar);
-    const sync = () => {
-      const v = input.value;
-      ghostTyped.textContent = v;
-      ghostRest.textContent = target.slice(v.length);
-      send.classList.toggle('ready', v.trim().length > 0);
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-      if (nearBottom()) scrollDown(false);
-    };
-    const doSend = () => {
-      const v = input.value.trim();
-      // пустое сообщение не отправляется: поле вздрагивает и появляется подсказка
-      if (!v) { pulse(bar); vibrate([30]); flashMsg(t('typeFirst')); input.focus(); return; }
-      input.blur();
-      onSend(v);
-    };
-    input.addEventListener('input', sync);
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } });
-    send.addEventListener('click', doSend);
-    // нажатие в любое место панели — открыть клавиатуру
-    bar.addEventListener('click', (e) => { if (!send.contains(e.target) && !left.contains(e.target)) input.focus(); });
-    sync();
-
-    // Лень печатать: тап по чату сам быстро допечатывает фразу из истории и отправляет её.
-    // Повторный тап во время допечатывания — сразу отправить.
-    let filling = null;
-    autoSend = () => {
-      if (filling) { clearInterval(filling); filling = null; finish(); return; }
-      input.blur();
-      input.value = '';
-      let i = 0;
-      const step = Math.max(1, Math.ceil(target.length / 35)); // длинная фраза допечатывается не дольше ~1 секунды
-      filling = setInterval(() => {
-        i = Math.min(target.length, i + step);
-        input.value = target.slice(0, i);
-        sync();
-        if (i % 3 === 0) play('клавиша', { auto: true });
-        if (i >= target.length) { clearInterval(filling); filling = null; setTimeout(finish, 180); }
-      }, 28);
-    };
-    let done = false;
-    const finish = () => { if (done) return; done = true; autoSend = null; onSend(text); };
-  }
-
-  let autoSend = null; // если сейчас поле «печатай сама» — функция «допечатать и отправить» для тапа
 
   function renderBottom() {
-    clearInterval(typeTimer);
-    autoSend = null;
     const choice = engine.currentChoice();
-    const s = engine.state;
-    const composingItem = s.composing != null ? s.log.find((x) => x.id === s.composing) : null;
     if (isFresh()) {
       bottom.replaceChildren(h('div', { class: 'start-zone' },
         h('button', { class: 'start-btn', type: 'button', onclick: () => onTap(true) }, t('start'))));
-    } else if (composingItem) {
-      // реплика героини из истории — печатает Ира
-      composeBar(composingItem.text, '', (v) => sendComposed(v));
-    } else if (choice && settings.manualTyping && choice.options.length === 1 && choice.options[0].text) {
-      // единственный вариант ответа — Ира печатает сама
-      const opt = choice.options[0];
-      composeBar(opt.text, opt.desc, (v) => choose(0, v));
-    } else if (choice && choice.options.length === 1 && choice.options[0].text) {
-      // Один вариант: текст сам «печатается» в поле ввода, нажатие — отправить
-      const opt = choice.options[0];
-      const field = h('div', { class: 'fake-input typed' });
-      const send = h('div', { class: 'send-btn', html: ICONS.send });
-      const bar = h('div', { class: 'inputbar choice-zone single', role: 'button', onclick: () => choose(0) },
-        h('div', { class: 'ib', html: ICONS.smile }), field, send);
-      bottom.replaceChildren(opt.desc ? h('div', { class: 'single-desc' }, `(${emo(opt.desc)})`) : '', bar);
-      let i = 0;
-      const full = emo(opt.text);
-      typeTimer = setInterval(() => {
-        i += Math.max(1, Math.ceil(full.length / 40));
-        field.textContent = full.slice(0, i);
-        if (i % 3 === 0) play('клавиша', { auto: true });
-        if (i >= full.length) { clearInterval(typeTimer); send.classList.add('ready'); }
-      }, 28);
     } else if (choice) {
+      // Выбор — всегда кнопками: нажатие сразу отправляет ответ (печатать ничего не нужно)
       const box = h('div', { class: 'choices choice-zone' + (choice.options.length > 1 ? ' many' : '') });
-      // 2–3 варианта: нажатие кнопки сразу отправляет (печатать не нужно)
       choice.options.forEach((o, i) => box.append(h('button', { class: 'choice', type: 'button', onclick: () => choose(i) },
         h('span', { class: 'choice-label' }, emo(o.label)),
         o.desc ? h('span', { class: 'choice-desc' }, `(${emo(o.desc)})`) : null)));
@@ -757,7 +668,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
 
   // ---------- «печатает…» ----------
   let typing = null;
-  function showTyping(who, seconds) {
+  function showTyping(who) {
     return new Promise((resolveP) => {
       const row = h('div', { class: 'row in run-start run-end new typing-row' });
       if (story.isGroup) row.append(avaOf(who));
@@ -766,13 +677,12 @@ export async function openChat(root, rec, { onExit, onNext }) {
       scrollDown(true);
       setSub(story.isGroup ? t('typing', { name: who }) + '…' : t('typing', { name: '' }).trim() + '…', true);
       const done = () => {
-        clearTimeout(timer);
         row.remove();
         setSub(idleSub());
         typing = null;
         resolveP();
       };
-      const timer = setTimeout(done, Math.max(0.3, seconds) * 1000);
+      // таймера нет: следующее нажатие сразу показывает сообщение
       typing = { done };
     });
   }
@@ -820,9 +730,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     const s = engine.state;
     if (s.ended !== null) return;
     if (isFresh() && !fromStart) { pulse(bottom.querySelector('.start-btn')); return; }
-    // поле «печатай сама»: тап допечатывает фразу за Иру и отправляет
-    if (autoSend && bottom.querySelector('.inputbar.manual')) { autoSend(); return; }
-    if (s.composing != null || s.atChoice) { pulse(bottom.querySelector('.choice-zone')); return; }
+    if (s.atChoice) { pulse(bottom.querySelector('.choice-zone')); return; }
     let ctx;
     try {
       ctx = engine.step();
@@ -844,18 +752,12 @@ export async function openChat(root, rec, { onExit, onNext }) {
       if (ctx.bgChanged) applySceneBg(false);
       if (ctx.item) {
         const it = ctx.item;
-        if (it.t === 'msg' && it.me && it.kind === 'text' && settings.manualTyping) {
-          // реплику героини Ира печатает сама: сообщение появится после «Отправить»
-          s.composing = it.id;
-          save();
-          renderBottom();
-        } else {
-          if (it.t === 'msg' && !it.me && settings.typing && ctx.typing) {
-            await showTyping(ctx.typingWho, ctx.typing);
-            if (myGen !== gen) return;
-          }
-          appendItem(it);
+        // «печатает…» — только где оно стоит в истории, и до следующего нажатия
+        if (it.t === 'msg' && !it.me && settings.typing && ctx.typing) {
+          await showTyping(ctx.typingWho);
+          if (myGen !== gen) return;
         }
+        appendItem(it);
       }
       ctx.sounds.forEach((n) => play(n));
       ctx.vibro.forEach((p) => vibrate(p));
@@ -868,21 +770,6 @@ export async function openChat(root, rec, { onExit, onNext }) {
   function pulse(el) {
     if (!el) return;
     el.classList.remove('nudge'); void el.offsetWidth; el.classList.add('nudge');
-  }
-
-  // Ира напечатала реплику из истории и нажала «Отправить»
-  function sendComposed(v) {
-    const s = engine.state;
-    const it = s.log.find((x) => x.id === s.composing);
-    s.composing = null;
-    if (!it) { renderBottom(); return; }
-    it.text = v;
-    if (replyTo) it.reply = replyTo;
-    replyTo = null;
-    drawReplyBar();
-    save();
-    appendItem(it);
-    renderBottom();
   }
 
   function choose(i, typed) {
