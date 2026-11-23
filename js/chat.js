@@ -699,6 +699,10 @@ export async function openChat(root, rec, { onExit, onNext }) {
     if (introOn) return;
     if (!settings.intro) { onTap(true); return; }
     introOn = true;
+    // Если серия начинается с затемнения ([переход …] до первого сообщения) – после заставки экран остаётся чёрным
+    const first = story.scenes[story.sceneOrder[0]];
+    const opening = first ? first.items.slice(0, first.items.findIndex((n) => ['msg', 'choice', 'jump'].includes(n.t)) >>> 0) : [];
+    if (opening.some((n) => n.t === 'transition')) document.body.append(h('div', { class: 'scene-cover' }));
     showIntro(story, async () => {
       introOn = false;
       // после заставки сами показываем начало
@@ -821,7 +825,11 @@ export async function openChat(root, rec, { onExit, onNext }) {
       // Показывается всегда (правило Иры 23.11.2026), даже если заставка серии выключена в настройках.
       const clearFeed = () => { if (ctx.cleared) { rows.clear(); list.replaceChildren(); drawPinBar(); } };
       if (ctx.transition) {
-        await showTransition(ctx.transition, () => { clearFeed(); if (ctx.bgChanged) applySceneBg(true); });
+        await showTransition(ctx.transition, () => {
+          clearFeed();
+          if (ctx.bgChanged) applySceneBg(true);
+          document.querySelectorAll('.scene-cover').forEach((el) => el.remove());
+        });
         if (myGen !== gen) return;
       } else {
         clearFeed();

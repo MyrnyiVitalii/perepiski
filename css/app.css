@@ -647,11 +647,14 @@ button.back-to-choices svg { width: 24px; height: 24px; }
 .intro.reduce .il { animation: intro-fade .5s forwards; filter: none; transform: none; }
 
 /* ===== Переход между сценами: затемнение + место и время ===== */
+/* чёрная подложка между заставкой серии и первым затемнением – чтобы чат не мелькал */
+.scene-cover { position: fixed; inset: 0; z-index: 54; background: #040404; }
 .scene-cut { position: fixed; inset: 0; z-index: 55; background: #040404; display: grid; place-items: center; cursor: pointer;
   animation: sc-in .38s ease-out both; -webkit-user-select: none; user-select: none; overflow: hidden; }
 .scene-cut.out { animation: sc-out .38s ease-in forwards; }
 .sc-inner { position: relative; text-align: center; padding: 0 16px; }
 .sc-place { text-wrap: balance; }
+.scene-cut.big .sc-place { font-size: clamp(30px, 10vw, 56px); line-height: 1.15; letter-spacing: .16em; margin-right: -.16em; }
 .sc-time { text-transform: uppercase; }
 .sc-place { font: 400 clamp(18px, 5.4vw, 30px)/1.2 'IntroLabel', sans-serif; letter-spacing: .32em; margin-right: -.32em; color: #ebe3d6;
   opacity: 0; animation: sc-text .7s .25s ease-out forwards; }

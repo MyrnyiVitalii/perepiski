@@ -17,7 +17,9 @@ export function showTransition(text, onDark) {
   return new Promise((resolve) => {
     const [place, ...rest] = String(text || '').split('·');
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const box = h('div', { class: 'scene-cut' + (reduce ? ' reduce' : '') },
+    // только надпись без места и времени («ЗА ШЕСТЬ ЧАСОВ ДО») – крупно, как титр в кино
+    const big = !rest.length;
+    const box = h('div', { class: 'scene-cut' + (big ? ' big' : '') + (reduce ? ' reduce' : '') },
       h('div', { class: 'intro-grain' }),
       h('div', { class: 'sc-inner' },
         h('div', { class: 'sc-place' }, place.trim().toUpperCase()),
@@ -35,7 +37,7 @@ export function showTransition(text, onDark) {
     document.body.append(box);
     timers.push(setTimeout(() => { if (onDark) { onDark(); onDark = null; } }, 400));
     // длинный текст («За шесть часов до этого · Школьный автобус · 15:47») держим дольше, чтобы успели прочитать
-    timers.push(setTimeout(finish, reduce ? 900 : String(text || '').length > 24 ? 2700 : 1700));
+    timers.push(setTimeout(finish, reduce ? 900 : big || String(text || '').length > 24 ? 2700 : 2200));
   });
 }
 

@@ -57,7 +57,7 @@ function showErrors(rec) {
 
 async function route() {
   // При переходе между экранами закрываем открытые шторки, меню и просмотр фото
-  document.querySelectorAll('.sheet-back, .menu-back, .viewer, .tbc').forEach((el) => el.remove());
+  document.querySelectorAll('.sheet-back, .menu-back, .viewer, .tbc, .scene-cover').forEach((el) => el.remove());
   clearOverlays();
   if (location.hash === '#notes') {
     await openNotes(root, {
