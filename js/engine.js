@@ -186,7 +186,7 @@ export class Engine {
       }
       case 'unpin': s.pinned = null; return 'next';
       case 'edit': {
-        // герой исправляет своё последнее сообщение — новый текст появляется отдельным тапом
+        // герой исправляет своё последнее сообщение – новый текст появляется отдельным тапом
         const target = this.lastMsg(node.who, true);
         if (!target) return 'next';
         return this.makeItem({ t: 'edit', who: node.who, target: target.id, text: node.text });
@@ -278,7 +278,7 @@ export class Engine {
   }
 
   // Нажата кнопка выбора
-  // typed — то, что Ира напечатала сама (если печатала вручную); уходит в чат вместо текста из истории
+  // typed – то, что Ира напечатала сама (если печатала вручную); уходит в чат вместо текста из истории
   choose(i, typed) {
     const node = this.currentChoice();
     if (!node) return null;
@@ -287,7 +287,7 @@ export class Engine {
     const ctx = { effects: [], sounds: [], toasts: [], vibro: [], item: null, bgChanged: false };
     ctx.items = [];
     if (opt.msgs && opt.msgs.length && !(typed && typed.trim())) {
-      // несколько строк «текст:» — несколько сообщений подряд (и фото, и спойлеры)
+      // несколько строк «текст:» – несколько сообщений подряд (и фото, и спойлеры)
       for (const n of opt.msgs) {
         const it = this.makeItem({ t: 'msg', who: this.story.me, me: true, kind: n.kind, text: n.text, file: n.file, line: n.line });
         if (n.hidden) it.hidden = n.hidden;

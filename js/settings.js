@@ -33,7 +33,7 @@ export async function loadSettings() {
     const s = await db.get('settings', 'main');
     if (s) Object.assign(settings, s);
     delete settings.recording;
-    delete settings.manualTyping; // «печатать самой» убрано 23.11.2026: реплики Иры появляются сами, выбор — кнопками
+    delete settings.manualTyping; // «печатать самой» убрано 23.11.2026: реплики Иры появляются сами, выбор – кнопками
   } catch (e) { /* первый запуск */ }
   applySettings();
 }
@@ -210,7 +210,7 @@ export function hiddenBySettings(item) {
 
 // Настройки с главного экрана
 export function openSettings(onChange) {
-  // Название приложения: меняется кнопкой «Применить» (или Enter); если просто закрыть настройки — тоже сохранится
+  // Название приложения: меняется кнопкой «Применить» (или Enter); если просто закрыть настройки – тоже сохранится
   const name = h('input', { class: 'set-input', type: 'text', value: settings.appName, maxlength: '40', enterkeyhint: 'done' });
   const applyBtn = h('button', { type: 'button', class: 'btn-small name-apply' }, t('apply'));
   const applyName = (quiet) => {

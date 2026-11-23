@@ -1,12 +1,12 @@
 Звуки сообщений взяты из открытого исходного кода приложений Telegram:
 
 sound_in.wav, sound_out.wav
-  Telegram для Android — https://github.com/DrKLO/Telegram
+  Telegram для Android – https://github.com/DrKLO/Telegram
   файлы TMessagesProj/src/main/res/raw/sound_in.wav и sound_out.wav
   лицензия: GNU GPL v2
 
 msg_incoming.mp3
-  Telegram Desktop — https://github.com/telegramdesktop/tdesktop
+  Telegram Desktop – https://github.com/telegramdesktop/tdesktop
   файл Telegram/Resources/sounds/msg_incoming.mp3
   лицензия: GNU GPL v3
 

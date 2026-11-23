@@ -13,7 +13,7 @@ let records = [];
 let openedFromList = false;
 
 // Встроенная история: папка с story.txt и assets.json (картинки рядом).
-// Демо лежит в папке demo, остальные истории — в stories/<папка>, список в stories/index.json
+// Демо лежит в папке demo, остальные истории – в stories/<папка>, список в stories/index.json
 async function loadBundled(id, folder, isDemo, v = 1) {
   const [text, map] = await Promise.all([
     fetch(folder + '/story.txt', { cache: 'no-cache' }).then((r) => r.text()),
@@ -71,7 +71,7 @@ async function route() {
     if (rec) {
       if (rec.errors.length && !rec.isDemo) { showErrors(rec); return; }
       await openChat(root, rec, {
-        // Назад в список: если пришли из списка — шаг назад по истории (тогда кнопка «Назад» телефона работает правильно)
+        // Назад в список: если пришли из списка – шаг назад по истории (тогда кнопка «Назад» телефона работает правильно)
         onExit: () => {
           if (openedFromList) { openedFromList = false; history.back(); } else location.replace('#');
         },
@@ -89,9 +89,9 @@ async function route() {
 }
 
 // ---------- Удалённые переписки ----------
-// Удаление — только на этом телефоне и навсегда: история не вернётся, даже когда на сайте выйдут обновления.
+// Удаление – только на этом телефоне и навсегда: история не вернётся, даже когда на сайте выйдут обновления.
 // Список удалённых: { id: v } в памяти телефона. Вернуть историю можно только с компьютера:
-// в stories/index.json у неё поднимают номер "v" (было 1 — ставим 2), тогда она снова появится.
+// в stories/index.json у неё поднимают номер "v" (было 1 – ставим 2), тогда она снова появится.
 let deleted = {};
 const isDeleted = (id, v) => deleted[id] != null && deleted[id] >= v;
 
@@ -112,7 +112,7 @@ async function deleteStory(rec) {
 function startOffline() {
   const swc = navigator.serviceWorker;
   if (!swc || typeof swc.register !== 'function') return;
-  // Просим помощника докачать картинки новых историй (удалённые — пропустить)
+  // Просим помощника докачать картинки новых историй (удалённые – пропустить)
   const askSync = () => swc.ready
     .then((reg) => reg.active && reg.active.postMessage({ type: 'sync', skip: Object.keys(deleted) }))
     .catch(() => {});

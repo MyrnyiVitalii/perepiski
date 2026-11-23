@@ -61,7 +61,7 @@ export async function cropAvatar(file) {
   const stage = h('div', { class: 'crop-stage', style: { width: S + 'px', height: S + 'px' } }, img, h('div', { class: 'crop-mask' }));
   const zoom = h('input', { type: 'range', min: '1', max: '4', step: '0.01', value: '1', class: 'slider crop-zoom' });
   const body = h('div', { class: 'imd-body' }, stage,
-    h('div', { class: 'crop-hint' }, 'Сдвиньте фото пальцем, ползунком — приблизить'), zoom);
+    h('div', { class: 'crop-hint' }, 'Сдвиньте фото пальцем, ползунком – приблизить'), zoom);
 
   const clamp = () => {
     ox = Math.min(0, Math.max(S - W * k, ox));

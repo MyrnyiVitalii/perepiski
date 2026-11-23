@@ -76,7 +76,7 @@ let ignorePop = 0;
 let deferredPush = 0; // окошко открыли, пока браузер ещё не закончил шаг «назад» от прошлого окошка
 export function pushOverlay(closeFn) {
   overlays.push(closeFn);
-  // Если предыдущее окошко только что закрылось и браузер ещё делает «назад» —
+  // Если предыдущее окошко только что закрылось и браузер ещё делает «назад» –
   // новую запись в историю добавим после этого шага, иначе следующий «назад» уведёт с экрана.
   if (ignorePop > 0) deferredPush += 1;
   else history.pushState({ overlay: overlays.length }, '');
@@ -85,7 +85,7 @@ export function popOverlay(closeFn) {
   const i = overlays.indexOf(closeFn);
   if (i < 0) return;
   overlays.splice(i, 1);
-  if (deferredPush > 0) { deferredPush -= 1; return; } // запись ещё не добавлена — и убирать нечего
+  if (deferredPush > 0) { deferredPush -= 1; return; } // запись ещё не добавлена – и убирать нечего
   ignorePop += 1;
   history.back();
 }
@@ -170,7 +170,7 @@ export function viewer(url, isVideo = false) {
 }
 
 // Окошко-вопрос с кнопками «Да» / «Нет» (вместо стандартного confirm браузера).
-// Возвращает Promise: true — «Да», false — «Нет», нажатие мимо окна или кнопка «Назад» телефона.
+// Возвращает Promise: true – «Да», false – «Нет», нажатие мимо окна или кнопка «Назад» телефона.
 export function askYesNo(title, text, { yes = 'Да', no = 'Нет', danger = false } = {}) {
   return new Promise((resolve) => {
     let closed = false;

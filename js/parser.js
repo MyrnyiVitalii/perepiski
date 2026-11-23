@@ -111,7 +111,7 @@ export function parseStory(text) {
       let last = scene.items[scene.items.length - 1];
       if (!last || last.t !== 'choice') { last = { t: 'choice', options: [], line: ln }; push(last); }
       if (last.options.length >= 3) err(ln, 'Больше 3 кнопок выбора подряд');
-      // «Текст кнопки (пояснение)» — пояснение в скобках показывается мелко под кнопкой
+      // «Текст кнопки (пояснение)» – пояснение в скобках показывается мелко под кнопкой
       let label = m[1], desc = '';
       const pm = label.match(/^(.*?)\s*\(([^()]+)\)\s*$/);
       if (pm && pm[1]) { label = pm[1]; desc = pm[2].trim(); }
@@ -129,7 +129,7 @@ export function parseStory(text) {
       if (k === 'текст') {
         if (v === '-') { opt.text = ''; opt.msgs = []; }
         else {
-          // каждая строка «текст:» — отдельное сообщение героини; первая заменяет текст кнопки
+          // каждая строка «текст:» – отдельное сообщение героини; первая заменяет текст кнопки
           const node = parseSceneLine('Я: ' + v, ln, err);
           if (!opt.msgs || !opt.msgsFromText) { opt.msgs = []; opt.msgsFromText = true; }
           if (node && node.t === 'msg') opt.msgs.push(node);
@@ -271,21 +271,21 @@ function parseSceneLine(line, ln, err) {
         return { t: 'vibrate', pattern: ms > 0 ? [Math.min(ms, 3000)] : [400, 150, 400], line: ln };
       }
       case 'фон': return { t: 'bg', file: /^нет$/i.test(arg) ? '' : arg, line: ln };
-      // [переход Посёлок Светлый · 16:41] — затемнение между сценами с названием места и временем
+      // [переход Посёлок Светлый · 16:41] – затемнение между сценами с названием места и временем
       case 'переход': return { t: 'transition', text: arg, line: ln };
       // [очистить чат] – всё, что было в ленте, исчезает (например, после хука «из будущего» история идёт с начала)
       case 'очистить': return { t: 'clear', line: ln };
-      // [закрепить] или [закрепить Аня] — закрепить последнее сообщение; [открепить]
+      // [закрепить] или [закрепить Аня] – закрепить последнее сообщение; [открепить]
       case 'закрепить': return { t: 'pin', who: arg, line: ln };
       case 'открепить': return { t: 'unpin', line: ln };
-      // [изменить Аня: новый текст] — Аня исправляет своё последнее сообщение
+      // [изменить Аня: новый текст] – Аня исправляет своё последнее сообщение
       case 'изменить': {
         const em = arg.match(/^([^:]+):\s*(.+)$/);
         if (!em) { err(ln, 'Нужно «[изменить Имя: новый текст]»'); return null; }
         return { t: 'edit', who: em[1].trim(), text: em[2], line: ln };
       }
       case 'реакция': {
-        // [реакция Аня 😱] — последний «кусок» строки это эмодзи, перед ним имя
+        // [реакция Аня 😱] – последний «кусок» строки это эмодзи, перед ним имя
         const rm = arg.match(/^(.+?)\s+(\S+)$/u);
         if (!rm) { err(ln, 'Нужно «[реакция Имя 😱]»'); return null; }
         return { t: 'react', who: rm[1].trim(), emoji: rm[2], line: ln };
@@ -313,7 +313,7 @@ function parseSceneLine(line, ln, err) {
       break;
     }
     msg.text = body;
-    // [фото скрыто файл] — размытое фото, открывается нажатием; [фото скрыто! файл] — страшное открытие
+    // [фото скрыто файл] – размытое фото, открывается нажатием; [фото скрыто! файл] – страшное открытие
     let bm = body.match(/^\[\s*фото\s+скрыто(!?)\s+([^\]]+?)\s*\]\s*(.*)$/i);
     if (bm) { msg.kind = 'photo'; msg.hidden = bm[1] ? 'scary' : 'soft'; msg.file = bm[2]; msg.text = bm[3]; return msg; }
     bm = body.match(/^\[\s*фото\s+([^\]]+?)\s*\]\s*(.*)$/i);

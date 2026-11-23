@@ -1,5 +1,5 @@
-/* ===== Переписки с Ирой — внешний вид =====
-   Все цвета и размеры — переменные ниже. Панель «Дизайн» (этап 3) будет менять именно их. */
+/* ===== Переписки с Ирой – внешний вид =====
+   Все цвета и размеры – переменные ниже. Панель «Дизайн» (этап 3) будет менять именно их. */
 
 :root {
   --font: Roboto, 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -440,7 +440,7 @@ body.no-avatars .row .ava { display: none; }
 .row.flash .bubble, .row.flash .sticker { animation: msg-flash 1.2s ease-out; }
 @keyframes msg-flash { 0%, 40% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: 0 0 0 0 transparent; } }
 
-/* спойлер: текст скрыт «шумом», нажатие — показать */
+/* спойлер: текст скрыт «шумом», нажатие – показать */
 .spoiler { border-radius: 4px; color: transparent; cursor: pointer; transition: color .3s, background .3s;
   background: repeating-linear-gradient(45deg, rgba(160, 160, 160, .55) 0 2px, rgba(90, 90, 90, .55) 2px 4px);
   background-size: 6px 6px; animation: spoiler-noise .6s steps(3) infinite; }
@@ -542,7 +542,7 @@ button.back-to-choices svg { width: 24px; height: 24px; }
 .dlg-btn:active { background: rgba(255, 255, 255, .08); }
 .dlg-btn.danger { color: var(--danger); }
 
-/* ===== Свайп чата в списке влево — кнопка «Удалить» (как в Telegram) ===== */
+/* ===== Свайп чата в списке влево – кнопка «Удалить» (как в Telegram) ===== */
 .story-row { position: relative; overflow: hidden; touch-action: pan-y; }
 .story-row .story { position: relative; z-index: 1; background: var(--bg); transition: transform .22s ease; }
 .story-row.dragging .story { transition: none; }

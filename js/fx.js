@@ -1,10 +1,10 @@
 // Эффект «помехи»: экран чата будто ломается, как сбой сигнала.
-// Полосы, сдвиги и смена цвета — готовая библиотека PowerGlitch (лицензия MIT, автор Benjamin Raymond,
-// https://github.com/7PH/powerglitch, файл vendor/powerglitch). Сверху — телевизионный шум и полосы развёртки.
+// Полосы, сдвиги и смена цвета – готовая библиотека PowerGlitch (лицензия MIT, автор Benjamin Raymond,
+// https://github.com/7PH/powerglitch, файл vendor/powerglitch). Сверху – телевизионный шум и полосы развёртки.
 import { PowerGlitch } from '../vendor/powerglitch/powerglitch.esm.js';
 
 // «Помехи»: только телевизионный шум, полосы развёртки и два коротких пропадания сигнала в чёрное.
-// Чат при этом не режется на полосы — он виден сквозь шум.
+// Чат при этом не режется на полосы – он виден сквозь шум.
 export function tvNoise(chat, duration = 1100) {
   if (!chat || chat.querySelector('.glitch-host')) return;
   const host = document.createElement('div');

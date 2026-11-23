@@ -1,4 +1,4 @@
-// Экран «Истории» — список всех историй, как список чатов в мессенджере.
+// Экран «Истории» – список всех историй, как список чатов в мессенджере.
 import { h, iconBtn, avatar, ICONS, askYesNo } from './ui.js';
 import { loadNotes, savedAvatar, noteSnippet } from './notes.js';
 import { t, plural } from './i18n.js';
@@ -26,7 +26,7 @@ export async function renderLibrary(root, records, { onOpen, onDelete, onOpenNot
   const listEl = h('div', { class: 'lib-list' });
   root.replaceChildren(h('div', { class: 'library' }, head, listEl));
 
-  // «Избранное» — всегда первым и закреплено (как в Telegram), удалить нельзя
+  // «Избранное» – всегда первым и закреплено (как в Telegram), удалить нельзя
   const notes = await loadNotes();
   const lastNote = notes.items[notes.items.length - 1];
   listEl.append(h('div', { class: 'story-row' }, h('button', { class: 'story saved', type: 'button', onclick: () => onOpenNotes() },
@@ -88,9 +88,9 @@ export async function renderLibrary(root, records, { onOpen, onDelete, onOpenNot
   }
 }
 
-// ---------- Свайп строки влево — показать кнопку «Удалить» ----------
+// ---------- Свайп строки влево – показать кнопку «Удалить» ----------
 const DEL_W = 88;
-let openRow = null; // { row, item } — открытая строка (открыта только одна)
+let openRow = null; // { row, item } – открытая строка (открыта только одна)
 
 function closeRow() {
   if (!openRow) return;

@@ -9,9 +9,9 @@ import { play, vibrate, vibrateForEffect, unlockAudio } from './sounds.js';
 import { signalGlitch, tvNoise } from './fx.js';
 import { showIntro, showTransition } from './intro.js';
 
-const TAP_MAX_MOVE = 10;     // пикселей: если палец сдвинулся больше — это прокрутка, а не тап
-const TAP_MAX_TIME = 350;    // миллисекунд: дольше — это долгое нажатие (выделение текста)
-const LONG_PRESS = 450;      // миллисекунд: долгое нажатие на сообщение — реакции
+const TAP_MAX_MOVE = 10;     // пикселей: если палец сдвинулся больше – это прокрутка, а не тап
+const TAP_MAX_TIME = 350;    // миллисекунд: дольше – это долгое нажатие (выделение текста)
+const LONG_PRESS = 450;      // миллисекунд: долгое нажатие на сообщение – реакции
 const TYPING_MS = 800;       // сколько висит «печатает…» перед сообщением (только где в истории [печатает N])
 const CHAT_KEY = '__chat__'; // ключ для фото самого чата
 const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '😱', '🔥', '👎'];
@@ -22,14 +22,14 @@ export async function openChat(root, rec, { onExit, onNext }) {
   const { story, resolve } = rec;
   let saved = null;
   try { saved = await db.get('progress', rec.id); } catch (e) { /* нет сохранения */ }
-  if (saved && rec.sig && saved.sig !== rec.sig) saved = null; // историю изменили — начинаем с начала
+  if (saved && rec.sig && saved.sig !== rec.sig) saved = null; // историю изменили – начинаем с начала
   // Серия 2, 3…: доверие и «запомненное» приходят из конца прошлой серии
   let carry = null;
   if (story.series && story.episode > 1) {
     try { carry = await db.get('progress', carryKey(story.series, story.episode)); } catch (e) { /* нет */ }
   }
   const engine = new Engine(story, saved, carry);
-  // «Печатать самой» убрано 23.11.2026: если в старом сохранении реплика ждала набора — она уже в чате
+  // «Печатать самой» убрано 23.11.2026: если в старом сохранении реплика ждала набора – она уже в чате
   engine.state.composing = null;
   if (!engine.state.myReact) engine.state.myReact = {};
 
@@ -41,8 +41,8 @@ export async function openChat(root, rec, { onExit, onNext }) {
     if (u) custom.set(name, u);
   }
   const char = (name) => story.characters[name] || { name, color: '#90a4ae', avatar: '', about: '' };
-  // Цвет имени — один из 7 цветов Telegram (красный, оранжевый, фиолетовый, зелёный, голубой, синий, розовый).
-  // В шапке истории можно написать «цвет: голубой»; если там HEX-цвет — цвет из Telegram выдаётся по порядку героев.
+  // Цвет имени – один из 7 цветов Telegram (красный, оранжевый, фиолетовый, зелёный, голубой, синий, розовый).
+  // В шапке истории можно написать «цвет: голубой»; если там HEX-цвет – цвет из Telegram выдаётся по порядку героев.
   const PEER_NAMES = { 'красный': 0, red: 0, 'оранжевый': 1, orange: 1, 'фиолетовый': 2, violet: 2, purple: 2, 'зелёный': 3, 'зеленый': 3, green: 3,
     'голубой': 4, cyan: 4, 'бирюзовый': 4, 'синий': 5, blue: 5, 'розовый': 6, pink: 6 };
   const AUTO_ORDER = [5, 3, 6, 1, 2, 4, 0];
@@ -64,7 +64,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
   const titleEl = h('div', { class: 'top-title' }, story.chatTitle);
   const subEl = h('div', { class: 'top-sub' });
   let headAva = headAvatar();
-  // Нажатие на аватарку или название чата — информация о чате (как в Telegram)
+  // Нажатие на аватарку или название чата – информация о чате (как в Telegram)
   const titles = h('div', { class: 'top-titles', onclick: () => openChatInfo() }, titleEl, subEl);
   const top = h('header', { class: 'top' },
     iconBtn('back', () => onExit()), headAva, titles,
@@ -140,7 +140,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
   const textOf = (item) => { const e = editOf(item.id); return e ? e.text : item.text; };
 
   // Оформление текста как в Telegram: **жирный**, __курсив__, ~~зачёркнутый~~, ||спойлер||
-  // ||текст|| — обычный спойлер, ||!текст|| — «страшный»: при открытии удар, тряска, вспышка, вибрация.
+  // ||текст|| – обычный спойлер, ||!текст|| – «страшный»: при открытии удар, тряска, вспышка, вибрация.
   // Открытые спойлеры запоминаются (key = номер сообщения + номер спойлера в нём).
   function rich(str, itemId = 0) {
     const frag = document.createDocumentFragment();
@@ -189,7 +189,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     }
   }
 
-  // Цитата сверху сообщения (ответ на сообщение), нажатие — прокрутить к нему
+  // Цитата сверху сообщения (ответ на сообщение), нажатие – прокрутить к нему
   function quoteEl(id) {
     const it = engine.state.log.find((x) => x.id === id);
     if (!it) return null;
@@ -212,7 +212,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     if (!url) return h('div', { class: 'photo-missing' }, `${t('photo')}: ${file}`);
     const img = h('img', { src: url, alt: '', draggable: 'false' });
     img.addEventListener('load', () => { if (nearBottom()) scrollDown(false); });
-    // Скрытое фото (как в Telegram): размыто и в «шуме», первое нажатие открывает, второе — на весь экран
+    // Скрытое фото (как в Telegram): размыто и в «шуме», первое нажатие открывает, второе – на весь экран
     if (item && item.hidden) {
       const key = `${item.id}:photo`;
       const box = h('div', { class: 'photo-spoiler' + (isOpen(key) ? ' open' : '') }, img,
@@ -240,7 +240,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
 
   function renderItem(item, prev, next, read, animate) {
     if (hiddenBySettings(item)) return null;
-    // Фото или видео выключены, но есть подпись — показываем только подпись
+    // Фото или видео выключены, но есть подпись – показываем только подпись
     if (item.t === 'msg' && ((item.kind === 'photo' && !settings.showPhotos) || (item.kind === 'video' && !settings.showVideos))) {
       item = { ...item, kind: 'text' };
     }
@@ -267,7 +267,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
 
     const c = char(item.who);
     const nameEl = (!item.me && story.isGroup && runStart) ? h('div', { class: 'name', style: { color: nameColor(item.who) } }, item.who) : null;
-    // «Переслано от …» и цитата ответа — над текстом, как в Telegram
+    // «Переслано от …» и цитата ответа – над текстом, как в Telegram
     const fwdEl = item.forwarded ? h('div', { class: 'fwd' }, t('forwardedFrom'), h('b', {}, item.forwarded)) : null;
     const replyId = item.reply ?? engine.state.myReply?.[item.id];
     const qEl = replyId ? quoteEl(replyId) : null;
@@ -295,7 +295,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
   }
 
   // ---------- Реакции ----------
-  // Реакции героев приходят из истории ([реакция Аня 😱]), моя — долгим нажатием или двойным тапом
+  // Реакции героев приходят из истории ([реакция Аня 😱]), моя – долгим нажатием или двойным тапом
   function reactsFor(id) {
     const out = [];
     for (const it of engine.state.log) if (it.t === 'react' && it.target === id) out.push({ who: it.who, emoji: it.emoji });
@@ -367,8 +367,8 @@ export async function openChat(root, rec, { onExit, onNext }) {
   }
 
   // ---------- Жесты, как в Telegram ----------
-  // Долгое нажатие — реакции и меню; двойной тап — ❤️;
-  // свайп сообщения влево — ответить на него; свайп всего чата вправо — назад к списку историй.
+  // Долгое нажатие – реакции и меню; двойной тап – ❤️;
+  // свайп сообщения влево – ответить на него; свайп всего чата вправо – назад к списку историй.
   function attachGestures() {
     let g = null, lastTap = { id: null, t: 0 };
     const W = () => chat.clientWidth;
@@ -421,7 +421,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
         row.classList.remove('reply-ready');
         if (dx < -55) setReply(+holder.dataset.id);
       } else if (!mode && holder && e && e.type === 'pointerup' && !e.target.closest('img, video, .video-box, .spoiler, .quote')) {
-        // двойной тап по сообщению — ❤️
+        // двойной тап по сообщению – ❤️
         const id = +holder.dataset.id, now = performance.now();
         if (lastTap.id === id && now - lastTap.t < 320) { lastTap = { id: null, t: 0 }; setMyReaction(id, '❤️'); }
         else lastTap = { id, t: now };
@@ -430,7 +430,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     };
     chat.addEventListener('pointerup', end);
     chat.addEventListener('pointercancel', (e) => {
-      // браузер забрал жест себе (началась прокрутка) — возвращаем всё на место
+      // браузер забрал жест себе (началась прокрутка) – возвращаем всё на место
       if (g && g.mode === 'back') { chat.style.transition = 'transform .2s'; chat.style.transform = ''; }
       if (g && g.mode === 'reply') { const r = g.holder.closest('.row'); r.style.transform = ''; r.classList.remove('reply-ready'); }
       if (g) clearTimeout(g.timer);
@@ -674,7 +674,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
       bottom.replaceChildren(h('div', { class: 'start-zone' },
         h('button', { class: 'start-btn', type: 'button', onclick: startStory }, t('start'))));
     } else if (choice) {
-      // Выбор — всегда кнопками: нажатие сразу отправляет ответ (печатать ничего не нужно)
+      // Выбор – всегда кнопками: нажатие сразу отправляет ответ (печатать ничего не нужно)
       const box = h('div', { class: 'choices choice-zone' + (choice.options.length > 1 ? ' many' : '') });
       choice.options.forEach((o, i) => box.append(h('button', { class: 'choice', type: 'button', onclick: () => choose(i) },
         h('span', { class: 'choice-label' }, emo(o.label)),
@@ -684,7 +684,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
       bottom.replaceChildren(fakeInputBar());
     }
     if (choice && !isFresh()) {
-      // Появились кнопки выбора: панель снизу стала выше — прокручиваем чат до конца,
+      // Появились кнопки выбора: панель снизу стала выше – прокручиваем чат до конца,
       // чтобы последнее сообщение было видно над кнопками (и ещё раз после анимации кнопок)
       requestAnimationFrame(() => scrollDown(false));
       setTimeout(() => scrollDown(true), 380);
@@ -724,8 +724,9 @@ export async function openChat(root, rec, { onExit, onNext }) {
         // перед сменой сцены (дальше в этой сцене только переход) – пауза 2,5 с (просьба Иры), чтобы хук «повисел»
         const sc = story.scenes[engine.state.scene];
         let k = engine.state.index;
-        while (sc && k < sc.items.length && !['msg', 'date', 'system', 'choice', 'jump', 'end'].includes(sc.items[k].t)) k++;
-        const sceneEnds = !sc || k >= sc.items.length || sc.items[k].t === 'jump';
+        let cut = false; // впереди затемнение – тоже пауза длиннее
+        while (sc && k < sc.items.length && !['msg', 'date', 'system', 'choice', 'jump', 'end'].includes(sc.items[k].t)) { if (sc.items[k].t === 'transition') cut = true; k++; }
+        const sceneEnds = cut || !sc || k >= sc.items.length || sc.items[k].t === 'jump';
         await pause(last && last.t === 'date' ? 1600 : sceneEnds ? 2500 : 1100);
         if (myGen !== gen) return;
         await onTap();
@@ -753,7 +754,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
         typing = null;
         resolveP();
       };
-      // «печатает…» коротко (0,8 с), потом сообщение появляется само; нажатие — сразу
+      // «печатает…» коротко (0,8 с), потом сообщение появляется само; нажатие – сразу
       const timer = setTimeout(done, TYPING_MS);
       typing = { done };
     });
@@ -806,7 +807,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     let ctx;
     try {
       ctx = engine.step();
-      // Сообщение скрыто настройками (например, выключены фото) — сразу берём следующее
+      // Сообщение скрыто настройками (например, выключены фото) – сразу берём следующее
       while (ctx && ctx.item && hiddenBySettings(ctx.item) && !ctx.choice && s.ended === null) {
         const more = engine.step();
         if (!more) break;
@@ -839,7 +840,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
       }
       if (ctx.item) {
         const it = ctx.item;
-        // «печатает…» — только где оно стоит в истории, и до следующего нажатия
+        // «печатает…» – только где оно стоит в истории, и до следующего нажатия
         if (it.t === 'msg' && !it.me && settings.typing && ctx.typing) {
           await showTyping(ctx.typingWho);
           if (myGen !== gen) return;
@@ -863,7 +864,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     if (typing || busy) return;
     const ctx = engine.choose(i, typed);
     if (!ctx) return;
-    // если перед этим смахнули сообщение — мой ответ будет с цитатой
+    // если перед этим смахнули сообщение – мой ответ будет с цитатой
     if (ctx.item && replyTo) ctx.item.reply = replyTo;
     replyTo = null;
     drawReplyBar();
@@ -1039,7 +1040,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     ));
   }
 
-  // Полоска доверия: 0 — красная, 5 — жёлтая, 10 — зелёная
+  // Полоска доверия: 0 – красная, 5 – жёлтая, 10 – зелёная
   function barStyle(v) {
     return { width: Math.max(4, v * 10) + '%', background: `hsl(${v * 12}, 70%, 48%)` };
   }

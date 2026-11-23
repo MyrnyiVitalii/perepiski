@@ -1,5 +1,5 @@
-// «Избранное» — чат с самим собой, как «Избранное» в Telegram: свои идеи, правки, правила, фото.
-// Всё хранится только на этом телефоне (IndexedDB): settings → 'notes', фото — assets → 'note|<id>'.
+// «Избранное» – чат с самим собой, как «Избранное» в Telegram: свои идеи, правки, правила, фото.
+// Всё хранится только на этом телефоне (IndexedDB): settings → 'notes', фото – assets → 'note|<id>'.
 // С сайтом не синхронизируется и при обновлениях приложения не пропадает.
 import { h, ICONS, iconBtn, flashMsg, viewer, pushOverlay, popOverlay, askYesNo } from './ui.js';
 import { t, plural } from './i18n.js';
@@ -10,7 +10,7 @@ import { vibrate } from './sounds.js';
 
 const KEY = 'notes';
 const LONG_PRESS = 450;
-const PHOTO_MAX = 1600; // фото уменьшаем до 1600 px по длинной стороне — хватает и для экрана, и для чтения текста
+const PHOTO_MAX = 1600; // фото уменьшаем до 1600 px по длинной стороне – хватает и для экрана, и для чтения текста
 
 export async function loadNotes() {
   try {
@@ -59,7 +59,7 @@ async function shrinkPhoto(file) {
 export async function openNotes(root, { onExit }) {
   const data = await loadNotes();
   let editing = null; // id заметки, которую сейчас меняем
-  let pendingPhoto = null; // { blob, url } — фото, выбранное, но ещё не отправленное
+  let pendingPhoto = null; // { blob, url } – фото, выбранное, но ещё не отправленное
 
   // ---------- Каркас ----------
   const subEl = h('div', { class: 'top-sub' });
@@ -154,7 +154,7 @@ export async function openNotes(root, { onExit }) {
     input.style.height = Math.min(input.scrollHeight, 160) + 'px';
   };
   input.addEventListener('input', syncInput);
-  // Enter на телефоне — новая строка (заметки бывают длинными); на компьютере Ctrl+Enter — отправить
+  // Enter на телефоне – новая строка (заметки бывают длинными); на компьютере Ctrl+Enter – отправить
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doSend(); } });
   send.addEventListener('click', () => doSend());
   bar.addEventListener('click', (e) => { if (!send.contains(e.target) && !clip.contains(e.target)) input.focus(); });
@@ -215,7 +215,7 @@ export async function openNotes(root, { onExit }) {
     await renderAll();
   }
 
-  // ---------- Долгое нажатие на заметку — меню ----------
+  // ---------- Долгое нажатие на заметку – меню ----------
   function openMenu(holder) {
     const id = +holder.dataset.id;
     const n = byId(id);
@@ -265,7 +265,7 @@ export async function openNotes(root, { onExit }) {
     await renderAll();
   }
 
-  // ---------- Жесты: долгое нажатие — меню; свайп вправо — назад ----------
+  // ---------- Жесты: долгое нажатие – меню; свайп вправо – назад ----------
   let g = null;
   chat.addEventListener('pointerdown', (e) => {
     if (!e.isPrimary || e.button > 0 || e.target.closest('.bottom, .top, .pin-bar')) return;
