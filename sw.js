@@ -13,6 +13,8 @@ const TEXT_TIMEOUT = 15000;
 // Если сеть только что не ответила (нет интернета или он еле живой) – следующие 30 секунд сразу берём из памяти,
 // чтобы приложение открывалось мгновенно, а не ждало сеть на каждом файле. Сеть при этом всё равно пробуем в фоне.
 let netBadUntil = 0;
+// Сеть ответила ошибкой (нет связи вообще) – тогда и тексты 30 секунд сразу берём из памяти. Медленная сеть сюда не считается.
+let netErrorUntil = 0;
 const netLooksBad = () => (self.navigator && self.navigator.onLine === false) || Date.now() < netBadUntil;
 
 const SHELL = [
@@ -77,17 +79,18 @@ function networkFirst(e, req) {
   const cacheKey = req.mode === 'navigate' ? new URL('index.html', self.registration.scope).href : req.url;
   const net = fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }).then(async (res) => {
     netBadUntil = 0;
+    netErrorUntil = 0;
     if (res.ok) {
       const cache = await caches.open(CACHE);
       await cache.put(cacheKey, res.clone());
     }
     return res;
-  }, (err) => { netBadUntil = Date.now() + 30000; throw err; });
+  }, (err) => { netBadUntil = Date.now() + 30000; netErrorUntil = Date.now() + 30000; throw err; });
   e.waitUntil(net.then(() => {}, () => {}));
   const url = new URL(req.url);
   const text = req.mode === 'navigate' || isText(url);
-  // для текстов не верим «сеть недавно плохая» – только явному «нет интернета»
-  const bad = text ? (self.navigator && self.navigator.onLine === false) : netLooksBad();
+  // для текстов «сеть медленная» не повод брать старое из памяти – только «нет интернета» или ошибка сети
+  const bad = text ? ((self.navigator && self.navigator.onLine === false) || Date.now() < netErrorUntil) : netLooksBad();
   return new Promise((resolve) => {
     let done = false;
     const fallback = async () => {
