@@ -688,26 +688,19 @@ export async function openChat(root, rec, { onExit, onNext }) {
     sync();
   }
 
-  let picked = null; // какой вариант выбран кнопкой и сейчас печатается
-
   function renderBottom() {
     clearInterval(typeTimer);
     const choice = engine.currentChoice();
     const s = engine.state;
     const composingItem = s.composing != null ? s.log.find((x) => x.id === s.composing) : null;
-    if (!choice) picked = null;
     if (isFresh()) {
       bottom.replaceChildren(h('div', { class: 'start-zone' },
         h('button', { class: 'start-btn', type: 'button', onclick: () => onTap(true) }, t('start'))));
     } else if (composingItem) {
       // реплика героини из истории — печатает Ира
       composeBar(composingItem.text, '', (v) => sendComposed(v));
-    } else if (choice && settings.manualTyping && picked != null && choice.options[picked]) {
-      // вариант выбран кнопкой — теперь его надо напечатать
-      const i = picked, opt = choice.options[i];
-      composeBar(opt.text, opt.desc, (v) => { picked = null; choose(i, v); },
-        choice.options.length > 1 ? () => { picked = null; renderBottom(); } : null);
     } else if (choice && settings.manualTyping && choice.options.length === 1 && choice.options[0].text) {
+      // единственный вариант ответа — Ира печатает сама
       const opt = choice.options[0];
       composeBar(opt.text, opt.desc, (v) => choose(0, v));
     } else if (choice && choice.options.length === 1 && choice.options[0].text) {
@@ -728,10 +721,8 @@ export async function openChat(root, rec, { onExit, onNext }) {
       }, 28);
     } else if (choice) {
       const box = h('div', { class: 'choices choice-zone' + (choice.options.length > 1 ? ' many' : '') });
-      choice.options.forEach((o, i) => box.append(h('button', { class: 'choice', type: 'button', onclick: () => {
-        // если печатаем сами и у варианта есть текст — сначала печатаем, потом отправляем
-        if (settings.manualTyping && o.text) { picked = i; renderBottom(); } else choose(i);
-      } },
+      // 2–3 варианта: нажатие кнопки сразу отправляет (печатать не нужно)
+      choice.options.forEach((o, i) => box.append(h('button', { class: 'choice', type: 'button', onclick: () => choose(i) },
         h('span', { class: 'choice-label' }, emo(o.label)),
         o.desc ? h('span', { class: 'choice-desc' }, `(${emo(o.desc)})`) : null)));
       bottom.replaceChildren(box);
