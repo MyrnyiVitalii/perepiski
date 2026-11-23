@@ -686,10 +686,33 @@ export async function openChat(root, rec, { onExit, onNext }) {
     // нажатие в любое место панели — открыть клавиатуру
     bar.addEventListener('click', (e) => { if (!send.contains(e.target) && !left.contains(e.target)) input.focus(); });
     sync();
+
+    // Лень печатать: тап по чату сам быстро допечатывает фразу из истории и отправляет её.
+    // Повторный тап во время допечатывания — сразу отправить.
+    let filling = null;
+    autoSend = () => {
+      if (filling) { clearInterval(filling); filling = null; finish(); return; }
+      input.blur();
+      input.value = '';
+      let i = 0;
+      const step = Math.max(1, Math.ceil(target.length / 35)); // длинная фраза допечатывается не дольше ~1 секунды
+      filling = setInterval(() => {
+        i = Math.min(target.length, i + step);
+        input.value = target.slice(0, i);
+        sync();
+        if (i % 3 === 0) play('клавиша', { auto: true });
+        if (i >= target.length) { clearInterval(filling); filling = null; setTimeout(finish, 180); }
+      }, 28);
+    };
+    let done = false;
+    const finish = () => { if (done) return; done = true; autoSend = null; onSend(text); };
   }
+
+  let autoSend = null; // если сейчас поле «печатай сама» — функция «допечатать и отправить» для тапа
 
   function renderBottom() {
     clearInterval(typeTimer);
+    autoSend = null;
     const choice = engine.currentChoice();
     const s = engine.state;
     const composingItem = s.composing != null ? s.log.find((x) => x.id === s.composing) : null;
@@ -797,6 +820,8 @@ export async function openChat(root, rec, { onExit, onNext }) {
     const s = engine.state;
     if (s.ended !== null) return;
     if (isFresh() && !fromStart) { pulse(bottom.querySelector('.start-btn')); return; }
+    // поле «печатай сама»: тап допечатывает фразу за Иру и отправляет
+    if (autoSend && bottom.querySelector('.inputbar.manual')) { autoSend(); return; }
     if (s.composing != null || s.atChoice) { pulse(bottom.querySelector('.choice-zone')); return; }
     let ctx;
     try {
