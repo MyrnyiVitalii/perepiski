@@ -462,3 +462,20 @@ body.no-avatars .row .ava { display: none; }
 .tbc-dots i:nth-child(2) { animation-delay: .25s; }
 .tbc-dots i:nth-child(3) { animation-delay: .5s; }
 @keyframes tbc-dot { 0%, 20% { opacity: 0; } 40%, 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ===== Скрытое: спойлер «рассыпается», скрытое фото размыто ===== */
+.spoiler.opening { animation: spoiler-open .6s ease-out both; }
+@keyframes spoiler-open {
+  0% { color: transparent; background-color: rgba(160, 160, 160, .55); filter: blur(0); }
+  40% { color: transparent; filter: blur(3px); }
+  100% { color: inherit; filter: none; }
+}
+.photo-spoiler { position: relative; overflow: hidden; border-radius: calc(var(--r) - 3px); cursor: pointer; }
+.photo-spoiler img { filter: blur(22px) brightness(.75) saturate(.6); transform: scale(1.12); transition: filter .7s ease, transform .7s ease; }
+.photo-spoiler .ps-noise { position: absolute; inset: 0; pointer-events: none; transition: opacity .6s;
+  background: repeating-radial-gradient(circle at 30% 40%, rgba(255, 255, 255, .22) 0 1px, transparent 1px 4px);
+  background-size: 7px 7px; animation: spoiler-noise .5s steps(3) infinite; }
+.photo-spoiler .ps-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 7px 14px; border-radius: 16px;
+  background: rgba(0, 0, 0, .55); color: #fff; font-size: 13.5px; white-space: nowrap; pointer-events: none; transition: opacity .4s; }
+.photo-spoiler.open img { filter: none; transform: none; }
+.photo-spoiler.open .ps-noise, .photo-spoiler.open .ps-label { opacity: 0; }

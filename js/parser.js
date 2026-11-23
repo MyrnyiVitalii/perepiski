@@ -300,7 +300,10 @@ function parseSceneLine(line, ln, err) {
       break;
     }
     msg.text = body;
-    let bm = body.match(/^\[\s*фото\s+([^\]]+?)\s*\]\s*(.*)$/i);
+    // [фото скрыто файл] — размытое фото, открывается нажатием; [фото скрыто! файл] — страшное открытие
+    let bm = body.match(/^\[\s*фото\s+скрыто(!?)\s+([^\]]+?)\s*\]\s*(.*)$/i);
+    if (bm) { msg.kind = 'photo'; msg.hidden = bm[1] ? 'scary' : 'soft'; msg.file = bm[2]; msg.text = bm[3]; return msg; }
+    bm = body.match(/^\[\s*фото\s+([^\]]+?)\s*\]\s*(.*)$/i);
     if (bm) { msg.kind = 'photo'; msg.file = bm[1]; msg.text = bm[2]; return msg; }
     bm = body.match(/^\[\s*видео\s+([^\]]+?)\s*\]\s*(.*)$/i);
     if (bm) { msg.kind = 'video'; msg.file = bm[1]; msg.text = bm[2]; return msg; }

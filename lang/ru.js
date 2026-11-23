@@ -77,6 +77,7 @@ export default {
   membersTitle: 'Участники',
   you: 'вы',
   toBeContinuedWord: 'Продолжение следует',
+  tapToOpen: 'Нажмите, чтобы открыть',
   copied: 'Скопировано',
 
   episodeEnd: 'Конец {n}-й серии',

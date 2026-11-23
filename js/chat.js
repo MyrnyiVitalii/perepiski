@@ -123,10 +123,12 @@ export async function openChat(root, rec, { onExit, onNext }) {
   const textOf = (item) => { const e = editOf(item.id); return e ? e.text : item.text; };
 
   // Оформление текста как в Telegram: **жирный**, __курсив__, ~~зачёркнутый~~, ||спойлер||
-  function rich(str) {
+  // ||текст|| — обычный спойлер, ||!текст|| — «страшный»: при открытии удар, тряска, вспышка, вибрация.
+  // Открытые спойлеры запоминаются (key = номер сообщения + номер спойлера в нём).
+  function rich(str, itemId = 0) {
     const frag = document.createDocumentFragment();
     const re = /(\*\*([^*]+)\*\*|__([^_]+)__|~~([^~]+)~~|\|\|([^|]+)\|\|)/g;
-    let last = 0, m;
+    let last = 0, m, n = 0;
     str = emo(str || '');
     while ((m = re.exec(str))) {
       if (m.index > last) frag.append(str.slice(last, m.index));
@@ -134,14 +136,40 @@ export async function openChat(root, rec, { onExit, onNext }) {
       else if (m[3]) frag.append(h('i', {}, m[3]));
       else if (m[4]) frag.append(h('s', {}, m[4]));
       else if (m[5]) {
-        const sp = h('span', { class: 'spoiler' }, m[5]);
-        sp.addEventListener('click', (e) => { e.stopPropagation(); sp.classList.add('open'); play('реакция', { auto: true }); });
+        const scary = m[5].startsWith('!');
+        const key = `${itemId}:${n++}`;
+        const sp = h('span', { class: 'spoiler' + (isOpen(key) ? ' open' : '') }, scary ? m[5].slice(1) : m[5]);
+        sp.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (sp.classList.contains('open')) return;
+          sp.classList.add('open', 'opening');
+          setOpen(key);
+          reveal(scary);
+        });
         frag.append(sp);
       }
       last = m.index + m[0].length;
     }
     if (last < str.length) frag.append(str.slice(last));
     return frag;
+  }
+
+  // Что открыто: спойлеры и скрытые фото
+  const isOpen = (key) => !!(engine.state.opened && engine.state.opened[key]);
+  function setOpen(key) {
+    if (!engine.state.opened) engine.state.opened = {};
+    engine.state.opened[key] = true;
+    save();
+  }
+  // Что происходит при открытии скрытого
+  function reveal(scary) {
+    if (scary) {
+      play('удар');
+      runEffects(['тряска', 'вспышка']);
+    } else {
+      play('реакция', { auto: true });
+      vibrate([20]);
+    }
   }
 
   // Цитата сверху сообщения (ответ на сообщение), нажатие — прокрутить к нему
@@ -162,11 +190,25 @@ export async function openChat(root, rec, { onExit, onNext }) {
     row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
   }
 
-  function imgEl(file) {
+  function imgEl(file, item) {
     const url = resolve(file);
     if (!url) return h('div', { class: 'photo-missing' }, `${t('photo')}: ${file}`);
     const img = h('img', { src: url, alt: '', draggable: 'false' });
     img.addEventListener('load', () => { if (nearBottom()) scrollDown(false); });
+    // Скрытое фото (как в Telegram): размыто и в «шуме», первое нажатие открывает, второе — на весь экран
+    if (item && item.hidden) {
+      const key = `${item.id}:photo`;
+      const box = h('div', { class: 'photo-spoiler' + (isOpen(key) ? ' open' : '') }, img,
+        h('div', { class: 'ps-noise' }), h('div', { class: 'ps-label' }, t('tapToOpen')));
+      box.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (box.classList.contains('open')) { viewer(url); return; }
+        box.classList.add('open', 'opening');
+        setOpen(key);
+        reveal(item.hidden === 'scary');
+      });
+      return box;
+    }
     img.addEventListener('click', () => viewer(url));
     return img;
   }
@@ -217,15 +259,15 @@ export async function openChat(root, rec, { onExit, onNext }) {
     if (item.kind === 'sticker') {
       row.append(h('div', { class: 'sticker' }, nameEl, imgEl(item.file), metaEl(item, read)));
     } else if (item.kind === 'photo' || item.kind === 'video') {
-      const media = item.kind === 'photo' ? imgEl(item.file) : videoEl(item.file);
+      const media = item.kind === 'photo' ? imgEl(item.file, item) : videoEl(item.file);
       const b = h('div', { class: 'bubble photo' + (text ? '' : ' no-caption') }, nameEl, fwdEl, qEl, media);
-      if (text) b.append(h('div', { class: 'caption text' }, rich(text), metaEl(item, read)));
+      if (text) b.append(h('div', { class: 'caption text' }, rich(text, item.id), metaEl(item, read)));
       else b.append(metaEl(item, read));
       row.append(b);
     } else if (item.kind === 'deleted') {
       row.append(h('div', { class: 'bubble' }, nameEl, h('div', { class: 'text deleted' }, emo('🚫 ' + t('deleted')), metaEl(item, read))));
     } else {
-      row.append(h('div', { class: 'bubble' }, nameEl, fwdEl, qEl, h('div', { class: 'text' }, rich(text), metaEl(item, read))));
+      row.append(h('div', { class: 'bubble' }, nameEl, fwdEl, qEl, h('div', { class: 'text' }, rich(text, item.id), metaEl(item, read))));
     }
     const holder = row.querySelector('.bubble, .sticker');
     holder.dataset.id = item.id;

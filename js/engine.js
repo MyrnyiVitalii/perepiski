@@ -214,6 +214,7 @@ export class Engine {
           kind: node.kind, text: node.text, file: node.file, line: node.line,
         });
         if (node.forwarded) item.forwarded = node.forwarded;
+        if (node.hidden) item.hidden = node.hidden;
         if (node.edited) item.edited = true;
         if (node.replyTo) {
           const r = this.lastMsg(node.replyTo === 'Я' ? this.story.me : node.replyTo);
