@@ -665,7 +665,14 @@ export async function openChat(root, rec, { onExit, onNext }) {
     } else {
       bottom.replaceChildren(fakeInputBar());
     }
-    requestAnimationFrame(() => { if (nearBottom()) scrollDown(false); });
+    if (choice && !isFresh()) {
+      // Появились кнопки выбора: панель снизу стала выше — прокручиваем чат до конца,
+      // чтобы последнее сообщение было видно над кнопками (и ещё раз после анимации кнопок)
+      requestAnimationFrame(() => scrollDown(false));
+      setTimeout(() => scrollDown(true), 380);
+    } else {
+      requestAnimationFrame(() => { if (nearBottom()) scrollDown(false); });
+    }
   }
 
   // «Start»: сначала заставка серии (чёрный экран, «Серия N», название), потом первое сообщение
@@ -803,7 +810,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     drawReplyBar();
     save();
     renderBottom();
-    if (ctx.item) appendItem(ctx.item);
+    (ctx.items && ctx.items.length ? ctx.items : [ctx.item]).filter(Boolean).forEach((it) => appendItem(it));
     ctx.vibro.forEach((p) => vibrate(p));
     runEffects(ctx.effects);
     showToasts(ctx.toasts);

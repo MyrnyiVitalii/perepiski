@@ -282,10 +282,23 @@ export class Engine {
     const opt = node.options[i];
     this.pushSnap();
     const ctx = { effects: [], sounds: [], toasts: [], vibro: [], item: null, bgChanged: false };
-    const text = typed && typed.trim() ? typed.trim() : opt.text;
-    if (text) {
-      ctx.item = this.makeItem({ t: 'msg', who: this.story.me, me: true, kind: 'text', text, file: '' });
-      this.state.log.push(ctx.item);
+    ctx.items = [];
+    if (opt.msgs && opt.msgs.length && !(typed && typed.trim())) {
+      // несколько строк «текст:» — несколько сообщений подряд (и фото, и спойлеры)
+      for (const n of opt.msgs) {
+        const it = this.makeItem({ t: 'msg', who: this.story.me, me: true, kind: n.kind, text: n.text, file: n.file, line: n.line });
+        if (n.hidden) it.hidden = n.hidden;
+        this.state.log.push(it);
+        ctx.items.push(it);
+      }
+      ctx.item = ctx.items[0];
+    } else {
+      const text = typed && typed.trim() ? typed.trim() : opt.text;
+      if (text) {
+        ctx.item = this.makeItem({ t: 'msg', who: this.story.me, me: true, kind: 'text', text, file: '' });
+        this.state.log.push(ctx.item);
+        ctx.items.push(ctx.item);
+      }
     }
     for (const tr of opt.trust) this.applyTrust(tr.who, tr.delta, ctx);
     for (const f of opt.flags) this.state.flags[f] = true;

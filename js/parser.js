@@ -126,7 +126,16 @@ export function parseStory(text) {
     if (dm && lastNode && lastNode.t === 'choice') {
       const opt = lastNode.options[lastNode.options.length - 1];
       const k = dm[1].toLowerCase(), v = dm[2].trim();
-      if (k === 'текст') opt.text = v === '-' ? '' : v;
+      if (k === 'текст') {
+        if (v === '-') { opt.text = ''; opt.msgs = []; }
+        else {
+          // каждая строка «текст:» — отдельное сообщение героини; первая заменяет текст кнопки
+          const node = parseSceneLine('Я: ' + v, ln, err);
+          if (!opt.msgs || !opt.msgsFromText) { opt.msgs = []; opt.msgsFromText = true; }
+          if (node && node.t === 'msg') opt.msgs.push(node);
+          opt.text = opt.msgs.length ? opt.msgs[0].text : v;
+        }
+      }
       else if (k === 'пояснение') opt.desc = v;
       else if (k === 'доверие') {
         for (const part of v.split(',')) {
