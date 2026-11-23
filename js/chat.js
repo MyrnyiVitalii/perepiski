@@ -7,6 +7,7 @@ import { settings, saveSettings, paintChatBg, themeSection, backgroundSection, t
 import { pickImage, cropAvatar, saveAsset, assetUrl, removeAsset, LIMITS } from './images.js';
 import { play, vibrate, vibrateForEffect, unlockAudio } from './sounds.js';
 import { signalGlitch, tvNoise } from './fx.js';
+import { showIntro } from './intro.js';
 
 const TAP_MAX_MOVE = 10;     // пикселей: если палец сдвинулся больше — это прокрутка, а не тап
 const TAP_MAX_TIME = 350;    // миллисекунд: дольше — это долгое нажатие (выделение текста)
@@ -652,7 +653,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     const choice = engine.currentChoice();
     if (isFresh()) {
       bottom.replaceChildren(h('div', { class: 'start-zone' },
-        h('button', { class: 'start-btn', type: 'button', onclick: () => onTap(true) }, t('start'))));
+        h('button', { class: 'start-btn', type: 'button', onclick: startStory }, t('start'))));
     } else if (choice) {
       // Выбор — всегда кнопками: нажатие сразу отправляет ответ (печатать ничего не нужно)
       const box = h('div', { class: 'choices choice-zone' + (choice.options.length > 1 ? ' many' : '') });
@@ -664,6 +665,20 @@ export async function openChat(root, rec, { onExit, onNext }) {
       bottom.replaceChildren(fakeInputBar());
     }
     requestAnimationFrame(() => { if (nearBottom()) scrollDown(false); });
+  }
+
+  // «Start»: сначала заставка серии (чёрный экран, «Серия N», название), потом первое сообщение
+  let introOn = false;
+  function startStory() {
+    if (introOn) return;
+    if (!settings.intro) { onTap(true); return; }
+    introOn = true;
+    showIntro(story, async () => {
+      introOn = false;
+      // после заставки сразу показываем первое сообщение (служебные строки вроде [фон] проходим сами)
+      await onTap(true);
+      for (let i = 0; i < 6 && !list.querySelector('.row, .sys') && !typing && !engine.state.atChoice && engine.state.ended === null; i++) await onTap();
+    });
   }
 
   // ---------- «печатает…» ----------

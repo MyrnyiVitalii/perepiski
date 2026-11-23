@@ -578,3 +578,70 @@ button.back-to-choices svg { width: 24px; height: 24px; }
 .name-apply.ready { opacity: 1; }
 .notes .react-actions { display: flex; flex-direction: column; gap: 6px; }
 .notes .react-actions button { width: 100%; }
+
+/* ===== Заставка серии (после «Start») ===== */
+@font-face { font-family: 'IntroTitle'; font-weight: 700; font-display: block;
+  src: url('../fonts/playfair-cyrillic.woff2') format('woff2'); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'IntroTitle'; font-weight: 700; font-display: block;
+  src: url('../fonts/playfair-latin.woff2') format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
+@font-face { font-family: 'IntroLabel'; font-weight: 400; font-display: block;
+  src: url('../fonts/oswald-cyrillic.woff2') format('woff2'); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'IntroLabel'; font-weight: 400; font-display: block;
+  src: url('../fonts/oswald-latin.woff2') format('woff2'); unicode-range: U+0000-00FF, U+2000-206F; }
+
+.intro { --blood: #a3231b; --bone: #ebe3d6;
+  position: fixed; inset: 0; z-index: 60; background: #040404; overflow: hidden; cursor: pointer;
+  display: grid; place-items: center; animation: intro-in .35s ease-out both; -webkit-user-select: none; user-select: none; }
+.intro-grain { position: absolute; inset: -50%; opacity: .09; pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation: intro-grain .5s steps(4) infinite; }
+.intro-vignette { position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 46%, rgba(120, 14, 10, .16) 0%, rgba(0, 0, 0, 0) 38%, rgba(0, 0, 0, .85) 100%); }
+.intro-inner { position: relative; text-align: center; padding: 0 16px; max-width: 100%; }
+.intro-series { font: 400 13px/1 'IntroLabel', sans-serif; color: #8b8682; letter-spacing: .55em; margin-right: -.55em;
+  opacity: 0; animation: intro-series 1.4s .25s cubic-bezier(.2, .7, .2, 1) forwards; }
+.intro-ep { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 18px;
+  font: 400 15px/1 'IntroLabel', sans-serif; letter-spacing: .38em; color: var(--blood); opacity: 0;
+  animation: intro-fade .9s .8s ease-out forwards; }
+.intro-ep i { display: block; height: 1px; width: 0; background: linear-gradient(90deg, transparent, var(--blood));
+  animation: intro-line 1s .85s ease-out forwards; }
+.intro-ep i:last-child { background: linear-gradient(90deg, var(--blood), transparent); }
+.intro-title { margin: 22px 0 0; font: 700 clamp(46px, 15vw, 104px)/1.02 'IntroTitle', Georgia, serif; color: var(--bone);
+  letter-spacing: .05em; text-transform: uppercase; overflow-wrap: anywhere;
+  animation: intro-breathe 2.4s 2.6s ease-in-out infinite alternate; }
+.intro-title.long { font-size: clamp(34px, 10vw, 72px); }
+.il { display: inline-block; opacity: 0; filter: blur(14px); transform: translateY(8px) scale(1.18);
+  animation: intro-letter 1.15s cubic-bezier(.2, .7, .2, 1) forwards;
+  text-shadow: 0 0 22px rgba(163, 35, 27, .55), 0 0 2px rgba(255, 240, 225, .35); }
+.intro-scratch { height: 1px; margin: 26px auto 0; width: 0; opacity: .5;
+  background: linear-gradient(90deg, transparent, rgba(235, 227, 214, .55), transparent);
+  animation: intro-line2 1.6s 2.3s ease-out forwards; }
+.intro-skip { position: absolute; left: 0; right: 0; bottom: calc(26px + var(--safe-bottom, 0px)); text-align: center;
+  font: 400 11px/1 'IntroLabel', sans-serif; letter-spacing: .3em; text-transform: uppercase; color: #4d4a47;
+  opacity: 0; animation: intro-fade .8s 1.6s forwards; }
+.intro.out { animation: intro-out .9s ease-in forwards; }
+.intro.out .intro-title { animation: intro-flicker-out .55s steps(1) forwards; }
+.intro.out-fast { animation: intro-fadeout .26s ease-in forwards; }
+
+@keyframes intro-in { from { opacity: 0; } }
+@keyframes intro-fade { to { opacity: 1; } }
+@keyframes intro-fadeout { to { opacity: 0; } }
+@keyframes intro-series { from { opacity: 0; letter-spacing: 1.1em; margin-right: -1.1em; } to { opacity: .9; } }
+@keyframes intro-line { to { width: 34px; } }
+@keyframes intro-line2 { to { width: 62%; } }
+@keyframes intro-grain { 0% { transform: translate(0, 0); } 25% { transform: translate(-4%, 3%); } 50% { transform: translate(3%, -5%); } 75% { transform: translate(-2%, -2%); } 100% { transform: translate(0, 0); } }
+/* буква проявляется из размытия и пару раз «мигает», как лампа */
+@keyframes intro-letter {
+  0% { opacity: 0; filter: blur(14px); transform: translateY(8px) scale(1.18); }
+  35% { opacity: .85; filter: blur(3px); }
+  42% { opacity: .15; }
+  50% { opacity: .9; filter: blur(1px); }
+  56% { opacity: .35; }
+  64%, 100% { opacity: 1; filter: blur(0); transform: none; }
+}
+@keyframes intro-breathe { from { text-shadow: 0 0 0 transparent; } to { filter: drop-shadow(0 0 10px rgba(163, 35, 27, .35)); } }
+@keyframes intro-flicker-out { 0% { opacity: 1; } 20% { opacity: .2; } 35% { opacity: .9; } 55% { opacity: .1; } 70% { opacity: .6; } 100% { opacity: 0; } }
+@keyframes intro-out { 0%, 55% { opacity: 1; } 100% { opacity: 0; } }
+
+.intro.reduce .intro-grain { animation: none; }
+.intro.reduce .il { animation: intro-fade .5s forwards; filter: none; transform: none; }

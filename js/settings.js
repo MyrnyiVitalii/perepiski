@@ -24,6 +24,7 @@ export const settings = {
   volume: 80,       // громкость 0–100
   vibration: true,  // вибрация на страшных моментах
   customSounds: [], // имена своих загруженных звуков
+  intro: true,      // заставка серии после «Start»
   sceneBgs: true,   // фоны сцен из истории ([фон ...])
 };
 
@@ -136,6 +137,7 @@ export function backgroundSection(onChange) {
 export function togglesSection(onChange) {
   return h('div', { class: 'set-block' },
     h('div', { class: 'set-title' }, t('setOther')),
+    toggleRow(t('setIntro'), 'intro', onChange),
     toggleRow(t('setTyping'), 'typing', onChange),
     toggleRow(t('setTrustToast'), 'trustToast', onChange),
     toggleRow(t('setTime'), 'showTime', onChange),

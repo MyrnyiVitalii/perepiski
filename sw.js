@@ -14,9 +14,10 @@ const netLooksBad = () => (self.navigator && self.navigator.onLine === false) ||
 
 const SHELL = [
   './', 'index.html', 'manifest.json', 'css/app.css',
-  'js/app.js', 'js/chat.js', 'js/engine.js', 'js/fx.js', 'js/i18n.js', 'js/images.js', 'js/library.js', 'js/notes.js',
+  'js/app.js', 'js/chat.js', 'js/engine.js', 'js/fx.js', 'js/i18n.js', 'js/images.js', 'js/intro.js', 'js/library.js', 'js/notes.js',
   'js/parser.js', 'js/settings.js', 'js/sounds.js', 'js/storage.js', 'js/themes.js', 'js/ui.js',
   'lang/ru.js', 'vendor/powerglitch/powerglitch.esm.js',
+  'fonts/playfair-cyrillic.woff2', 'fonts/playfair-latin.woff2', 'fonts/oswald-cyrillic.woff2', 'fonts/oswald-latin.woff2',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
   'sounds/telegram/sound_in.wav', 'sounds/telegram/sound_out.wav', 'sounds/telegram/msg_incoming.mp3',
 ];
