@@ -189,7 +189,7 @@ const VIBRO = {
   'удар': [500],
   'финал': [200, 100, 600],
 };
-const FX_VIBRO = { 'тряска': [250, 60, 250, 60, 300], 'помехи': [30, 40, 60, 30, 90], 'вспышка': [350] };
+const FX_VIBRO = { 'тряска': [250, 60, 250, 60, 300], 'помехи': [30, 40, 60, 30, 90], 'сбой': [40, 30, 80, 30, 120], 'вспышка': [350] };
 
 export function vibrate(pattern) {
   if (!settings.vibration || !navigator.vibrate || !pattern) return;

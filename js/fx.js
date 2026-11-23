@@ -3,6 +3,42 @@
 // https://github.com/7PH/powerglitch, файл vendor/powerglitch). Сверху — телевизионный шум и полосы развёртки.
 import { PowerGlitch } from '../vendor/powerglitch/powerglitch.esm.js';
 
+// «Помехи»: только телевизионный шум, полосы развёртки и два коротких пропадания сигнала в чёрное.
+// Чат при этом не режется на полосы — он виден сквозь шум.
+export function tvNoise(chat, duration = 1100) {
+  if (!chat || chat.querySelector('.glitch-host')) return;
+  const host = document.createElement('div');
+  host.className = 'glitch-host tv-only';
+  chat.append(host);
+  addNoise(host, duration);
+}
+
+function addNoise(host, duration) {
+  const noise = document.createElement('canvas');
+  noise.className = 'glitch-noise';
+  noise.width = 120; noise.height = 240;
+  const scan = document.createElement('div');
+  scan.className = 'glitch-scan';
+  const drop = document.createElement('div');
+  drop.className = 'glitch-drop';
+  host.append(noise, scan, drop);
+  const ctx = noise.getContext('2d');
+  const img = ctx.createImageData(noise.width, noise.height);
+  const tick = () => {
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const v = Math.random() * 255;
+      d[i] = d[i + 1] = d[i + 2] = v;
+      d[i + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  };
+  tick();
+  const timer = setInterval(tick, 45);
+  setTimeout(() => { clearInterval(timer); host.remove(); }, duration + 60);
+}
+
+// «Сбой»: то же самое плюс экран режется на полосы (библиотека PowerGlitch)
 export function signalGlitch(chat, duration = 1100) {
   if (!chat || chat.querySelector('.glitch-host')) return;
   const feed = chat.querySelector('.feed');
@@ -36,29 +72,5 @@ export function signalGlitch(chat, duration = 1100) {
     pulse: false,
   });
   g.startGlitch();
-
-  // Шум как на старом телевизоре + полосы развёртки + короткое «пропадание» сигнала
-  const noise = document.createElement('canvas');
-  noise.className = 'glitch-noise';
-  noise.width = 120; noise.height = 240;
-  const scan = document.createElement('div');
-  scan.className = 'glitch-scan';
-  const drop = document.createElement('div');
-  drop.className = 'glitch-drop';
-  host.append(noise, scan, drop);
-  const ctx = noise.getContext('2d');
-  const img = ctx.createImageData(noise.width, noise.height);
-  const tick = () => {
-    const d = img.data;
-    for (let i = 0; i < d.length; i += 4) {
-      const v = Math.random() * 255;
-      d[i] = d[i + 1] = d[i + 2] = v;
-      d[i + 3] = 255;
-    }
-    ctx.putImageData(img, 0, 0);
-  };
-  tick();
-  const timer = setInterval(tick, 45);
-
-  setTimeout(() => { clearInterval(timer); host.remove(); }, duration + 60);
+  addNoise(host, duration);
 }

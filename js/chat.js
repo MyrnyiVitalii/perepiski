@@ -6,7 +6,7 @@ import { db } from './storage.js';
 import { settings, saveSettings, paintChatBg, themeSection, backgroundSection, togglesSection, soundSection, emo, hiddenBySettings } from './settings.js';
 import { pickImage, makeAvatar, saveAsset, assetUrl, removeAsset, LIMITS } from './images.js';
 import { play, vibrate, vibrateForEffect, unlockAudio } from './sounds.js';
-import { signalGlitch } from './fx.js';
+import { signalGlitch, tvNoise } from './fx.js';
 
 const TAP_MAX_MOVE = 10;     // пикселей: если палец сдвинулся больше — это прокрутка, а не тап
 const TAP_MAX_TIME = 350;    // миллисекунд: дольше — это долгое нажатие (выделение текста)
@@ -711,7 +711,10 @@ export async function openChat(root, rec, { onExit, onNext }) {
         chat.classList.remove('fx-shake'); void chat.offsetWidth; chat.classList.add('fx-shake');
         setTimeout(() => chat.classList.remove('fx-shake'), 600);
       } else if (n.startsWith('помех')) {
-        // небольшая пауза, чтобы новое сообщение («… вступил в чат») успело появиться и тоже «сломалось»
+        // телевизионный шум, полосы развёртки и два пропадания сигнала
+        setTimeout(() => tvNoise(chat), 120);
+      } else if (n.startsWith('сбой')) {
+        // то же + экран режется на полосы (PowerGlitch); пауза, чтобы новое сообщение успело появиться
         setTimeout(() => signalGlitch(chat), 120);
       } else if (n.startsWith('вспыш')) {
         const layer = h('div', { class: 'fx-layer fx-flash' });
