@@ -699,6 +699,8 @@ export async function openChat(root, rec, { onExit, onNext }) {
     if (introOn) return;
     if (!settings.intro) { onTap(true); return; }
     introOn = true;
+    // Кнопку «Старт» убираем сразу: иначе она видна, пока заставка тает, и кажется, что нужно нажать ещё раз
+    bottom.replaceChildren(fakeInputBar());
     // Если серия начинается с затемнения ([переход …] до первого сообщения) – после заставки экран остаётся чёрным
     const first = story.scenes[story.sceneOrder[0]];
     const opening = first ? first.items.slice(0, first.items.findIndex((n) => ['msg', 'choice', 'jump'].includes(n.t)) >>> 0) : [];
