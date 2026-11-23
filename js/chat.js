@@ -12,6 +12,7 @@ import { showIntro } from './intro.js';
 const TAP_MAX_MOVE = 10;     // пикселей: если палец сдвинулся больше — это прокрутка, а не тап
 const TAP_MAX_TIME = 350;    // миллисекунд: дольше — это долгое нажатие (выделение текста)
 const LONG_PRESS = 450;      // миллисекунд: долгое нажатие на сообщение — реакции
+const TYPING_MS = 800;       // сколько висит «печатает…» перед сообщением (только где в истории [печатает N])
 const CHAT_KEY = '__chat__'; // ключ для фото самого чата
 const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '😱', '🔥', '👎'];
 
@@ -675,9 +676,9 @@ export async function openChat(root, rec, { onExit, onNext }) {
     introOn = true;
     showIntro(story, async () => {
       introOn = false;
-      // после заставки сразу показываем первое сообщение (служебные строки вроде [фон] проходим сами)
+      // после заставки сами доходим до первого сообщения (дата, [фон], «печатает…» — без нажатий)
       await onTap(true);
-      for (let i = 0; i < 6 && !list.querySelector('.row, .sys') && !typing && !engine.state.atChoice && engine.state.ended === null; i++) await onTap();
+      for (let i = 0; i < 8 && !list.querySelector('.row:not(.typing-row)') && !engine.state.atChoice && engine.state.ended === null; i++) await onTap();
     });
   }
 
@@ -691,13 +692,18 @@ export async function openChat(root, rec, { onExit, onNext }) {
       list.append(row);
       scrollDown(true);
       setSub(story.isGroup ? t('typing', { name: who }) + '…' : t('typing', { name: '' }).trim() + '…', true);
+      let finished = false;
       const done = () => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
         row.remove();
         setSub(idleSub());
         typing = null;
         resolveP();
       };
-      // таймера нет: следующее нажатие сразу показывает сообщение
+      // «печатает…» коротко (0,8 с), потом сообщение появляется само; нажатие — сразу
+      const timer = setTimeout(done, TYPING_MS);
       typing = { done };
     });
   }
