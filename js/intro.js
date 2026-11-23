@@ -3,7 +3,7 @@
 import { h, pushOverlay, popOverlay } from './ui.js';
 import { play, vibrate, unlockAudio } from './sounds.js';
 
-// «Зевинск. Серия 1: Фура» → { series: 'Зевинск', ep: 1, name: 'Фура' }
+// «Светлый. Серия 1: Фура» → { series: 'Светлый', ep: 1, name: 'Фура' }
 export function introParts(story) {
   const title = story.title || '';
   const m = title.match(/серия\s*\d+\s*[:.—–-]\s*(.+)$/i);

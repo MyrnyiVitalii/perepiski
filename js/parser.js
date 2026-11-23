@@ -188,7 +188,7 @@ export function parseStory(text) {
   story.isGroup = story.type.toLowerCase().startsWith('гр');
   if (!story.chatTitle) story.chatTitle = story.isGroup ? story.title : (story.others[0] || story.title);
 
-  // Серии: «Сериал: Зевинск» + «Серия: 2», или название вида «Зевинск. Серия 2: Вежливые»
+  // Серии: «Сериал: Светлый» + «Серия: 2», или название вида «Светлый. Серия 2: Вежливые»
   if (!story.series || !story.episode) {
     const sm2 = story.title.match(/^(.*?)[\s.,:—-]*серия\s*(\d+)/i);
     if (sm2 && sm2[1].trim()) {
