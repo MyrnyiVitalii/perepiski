@@ -697,13 +697,18 @@ export async function openChat(root, rec, { onExit, onNext }) {
       introOn = false;
       // после заставки сами показываем начало
       await onTap(true);
-      // Хук в начале показываем целиком сам: сообщения первой сцены до второй плашки с датой
-      // («За шесть часов до этого») — но не больше 6 сообщений и до первого выбора
+      // Хук в начале показываем целиком сам, с паузами: сообщения первой сцены, плашка «За шесть часов до этого»,
+      // затемнение с местом следующей сцены и её первое сообщение. Не больше 6 сообщений хука и до первого выбора.
       const firstScene = story.sceneOrder[0];
       const count = (t) => engine.state.log.filter((x) => x.t === t).length;
+      const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+      const myGen = gen;
       for (let i = 0; i < 20; i++) {
         if (engine.state.atChoice || engine.state.ended !== null || engine.state.scene !== firstScene) break;
-        if (count('date') >= 2 || count('msg') >= 6) break;
+        if (count('msg') >= 6) break;
+        const last = engine.state.log[engine.state.log.length - 1];
+        await pause(last && last.t === 'date' ? 1600 : 1100);
+        if (myGen !== gen) return;
         await onTap();
       }
     });
@@ -798,8 +803,9 @@ export async function openChat(root, rec, { onExit, onNext }) {
     busy = true;
     const myGen = gen;
     try {
-      // Переход между сценами: затемнение с местом и временем, фон меняется, пока экран чёрный
-      if (ctx.transition && settings.intro !== false) {
+      // Переход между сценами: затемнение с местом и временем, фон меняется, пока экран чёрный.
+      // Показывается всегда (правило Иры 23.11.2026), даже если заставка серии выключена в настройках.
+      if (ctx.transition) {
         await showTransition(ctx.transition, () => { if (ctx.bgChanged) applySceneBg(true); });
         if (myGen !== gen) return;
       } else if (ctx.bgChanged) applySceneBg(false);

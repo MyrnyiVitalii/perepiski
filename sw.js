@@ -1,13 +1,16 @@
 // Работа без интернета (service worker).
 // При первом запуске с интернетом сохраняет в память телефона всё приложение и все истории с картинками.
 // Дальше:
-//   код и тексты (html, js, css, json, txt) — сначала из сети (свежая версия), без сети — из памяти;
-//   картинки, звуки, видео — тоже сначала из сети (чтобы новые картинки было видно сразу), без сети — из памяти.
+//   код и тексты (html, js, css, json, txt) – сначала из сети (свежая версия), без сети – из памяти;
+//   картинки, звуки, видео – тоже сначала из сети (чтобы новые картинки было видно сразу), без сети – из памяти.
 // Приложение при каждом запуске просит «sync»: докачать картинки новых историй, которых ещё нет в памяти.
 
 const CACHE = 'perepiski-v2'; // v2 (23.11.2026): старая память со старыми картинками стирается при обновлении
-const NET_TIMEOUT = 3000; // если сеть тянет дольше 3 секунд — показываем из памяти, а сеть обновит память в фоне
-// Если сеть только что не ответила (нет интернета или он еле живой) — следующие 30 секунд сразу берём из памяти,
+const NET_TIMEOUT = 3000; // картинки: если сеть тянет дольше 3 секунд – показываем из памяти, а сеть обновит память в фоне
+// Тексты историй и код (story.txt, js, css, json, html) при интернете ждём дольше: иначе на медленной сети
+// телефон показывал старую версию серии (без новых переходов) и старый прогресс (24.11.2026)
+const TEXT_TIMEOUT = 15000;
+// Если сеть только что не ответила (нет интернета или он еле живой) – следующие 30 секунд сразу берём из памяти,
 // чтобы приложение открывалось мгновенно, а не ждало сеть на каждом файле. Сеть при этом всё равно пробуем в фоне.
 let netBadUntil = 0;
 const netLooksBad = () => (self.navigator && self.navigator.onLine === false) || Date.now() < netBadUntil;
@@ -49,12 +52,12 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
-  // Видео перематывается кусками (Range): такие запросы — в сеть, без сети — целиком из памяти
+  // Видео перематывается кусками (Range): такие запросы – в сеть, без сети – целиком из памяти
   if (req.headers.has('range')) {
     e.respondWith(fetch(req).catch(() => fromCache(req)));
     return;
   }
-  // всё — сначала из сети (если она есть и отвечает быстро), без сети — из памяти
+  // всё – сначала из сети (если она есть и отвечает быстро), без сети – из памяти
   e.respondWith(networkFirst(e, req));
 });
 
@@ -69,7 +72,7 @@ async function fromCache(req) {
   return Response.error();
 }
 
-// Сначала сеть (с проверкой свежести, чтобы не ждать 10 минут кэша GitHub), без сети — память
+// Сначала сеть (с проверкой свежести, чтобы не ждать 10 минут кэша GitHub), без сети – память
 function networkFirst(e, req) {
   const cacheKey = req.mode === 'navigate' ? new URL('index.html', self.registration.scope).href : req.url;
   const net = fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }).then(async (res) => {
@@ -81,7 +84,10 @@ function networkFirst(e, req) {
     return res;
   }, (err) => { netBadUntil = Date.now() + 30000; throw err; });
   e.waitUntil(net.then(() => {}, () => {}));
-  const bad = netLooksBad();
+  const url = new URL(req.url);
+  const text = req.mode === 'navigate' || isText(url);
+  // для текстов не верим «сеть недавно плохая» – только явному «нет интернета»
+  const bad = text ? (self.navigator && self.navigator.onLine === false) : netLooksBad();
   return new Promise((resolve) => {
     let done = false;
     const fallback = async () => {
@@ -91,7 +97,7 @@ function networkFirst(e, req) {
       if (hit && !done) { done = true; resolve(hit); }
       return !!hit;
     };
-    const timer = setTimeout(() => { netBadUntil = Date.now() + 30000; fallback(); }, bad ? 0 : NET_TIMEOUT);
+    const timer = setTimeout(() => { netBadUntil = Date.now() + 30000; fallback(); }, bad ? 0 : (text ? TEXT_TIMEOUT : NET_TIMEOUT));
     net.then((res) => {
       if (done) return;
       if (res.ok) { done = true; clearTimeout(timer); resolve(res); return; }
@@ -103,7 +109,7 @@ function networkFirst(e, req) {
   });
 }
 
-// Сначала память, в фоне обновляем из сети; если в памяти нет — из сети и сохраняем
+// Сначала память, в фоне обновляем из сети; если в памяти нет – из сети и сохраняем
 async function cacheFirst(e, req) {
   const cache = await caches.open(CACHE);
   const hit = await cache.match(req, { ignoreSearch: true, ignoreVary: true });
@@ -119,7 +125,7 @@ async function cacheFirst(e, req) {
 }
 
 // Докачать всё для историй: stories/index.json → каждая папка → story.txt, assets.json и все картинки из assets.json.
-// Уже сохранённые картинки не качаем заново (их обновляет cacheFirst, когда они видны). skip — удалённые истории.
+// Уже сохранённые картинки не качаем заново (их обновляет cacheFirst, когда они видны). skip – удалённые истории.
 async function syncStories(skip) {
   const cache = await caches.open(CACHE);
   const base = self.registration.scope;
@@ -152,6 +158,6 @@ async function syncStories(skip) {
     try {
       const r = await fetch(u);
       if (r.ok && r.status === 200) await cache.put(u, r);
-    } catch (err) { /* без сети — в другой раз */ }
+    } catch (err) { /* без сети – в другой раз */ }
   }
 }
