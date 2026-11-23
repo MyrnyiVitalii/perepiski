@@ -31,6 +31,8 @@ export const ICONS = {
   smile: svg('<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>'),
   clip: svg('<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>'),
   mic: svg('<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/>'),
+  send: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4l17.45-7.48a1 1 0 0 0 0-1.84L3.4 3.6a.99.99 0 0 0-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z"/></svg>',
+  palette: svg('<circle cx="13.5" cy="6.5" r="1.2" fill="currentColor"/><circle cx="17.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="8.5" cy="7.5" r="1.2" fill="currentColor"/><circle cx="6.5" cy="12.5" r="1.2" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.5-.75 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/>'),
   tick1: '<svg viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6l3 3L12 2"/></svg>',
   tick2: '<svg viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6l3 3L10.5 2"/><path d="M7.5 8.6L8 9l6.5-7"/></svg>',
 };
@@ -67,7 +69,11 @@ export function sheet(content, onClose) {
   return { close, panel };
 }
 
-export function viewer(url) {
-  const v = h('div', { class: 'viewer', onclick: () => v.remove() }, h('img', { src: url, alt: '' }));
+export function viewer(url, isVideo = false) {
+  const media = isVideo
+    ? h('video', { src: url, controls: true, autoplay: true, playsinline: true })
+    : h('img', { src: url, alt: '' });
+  const close = h('button', { type: 'button', class: 'viewer-close', onclick: () => v.remove() }, '✕');
+  const v = h('div', { class: 'viewer', onclick: (e) => { if (e.target === v || !isVideo) v.remove(); } }, media, close);
   document.body.append(v);
 }

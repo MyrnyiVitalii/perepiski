@@ -1,13 +1,14 @@
-// Экран чата: лента сообщений, тапы, «печатает…», выборы, меню, режим съёмки.
+// Экран чата: лента сообщений, тапы, «печатает…», выборы, меню, настройки чата.
 import { h, ICONS, iconBtn, avatar, flashMsg, sheet, viewer } from './ui.js';
 import { t, plural } from './i18n.js';
 import { Engine } from './engine.js';
 import { db } from './storage.js';
-import { settings, openSettings } from './settings.js';
+import { settings, paintChatBg, themeSection, backgroundSection, togglesSection, emo, hiddenBySettings } from './settings.js';
+import { pickImage, makeAvatar, saveAsset, assetUrl, removeAsset, LIMITS } from './images.js';
 
 const TAP_MAX_MOVE = 10;     // пикселей: если палец сдвинулся больше — это прокрутка, а не тап
 const TAP_MAX_TIME = 350;    // миллисекунд: дольше — это долгое нажатие (выделение текста)
-const LONG_PRESS = 700;      // миллисекунд: долгое нажатие на шапку — выход из режима съёмки
+const CHAT_KEY = '__chat__'; // ключ для фото самого чата
 
 export async function openChat(root, rec, { onExit }) {
   const { story, resolve } = rec;
@@ -16,18 +17,27 @@ export async function openChat(root, rec, { onExit }) {
   if (saved && rec.sig && saved.sig !== rec.sig) saved = null; // историю изменили — начинаем с начала
   const engine = new Engine(story, saved);
 
+  // Фото, которые пользователь поставил сам, важнее фото из истории
+  const avKey = (name) => `av|${rec.id}|${name}`;
+  const custom = new Map();
+  for (const name of [...story.charOrder, CHAT_KEY]) {
+    const u = await assetUrl(avKey(name));
+    if (u) custom.set(name, u);
+  }
   const char = (name) => story.characters[name] || { name, color: '#90a4ae', avatar: '', about: '' };
-  const avaOf = (name) => { const c = char(name); return avatar(resolve(c.avatar), c.name, c.color); };
+  const avaUrl = (name) => custom.get(name) || resolve(char(name).avatar);
+  const avaOf = (name) => { const c = char(name); return avatar(avaUrl(name), c.name, c.color); };
+  const chatAvaUrl = () => custom.get(CHAT_KEY) || resolve(story.chatAvatar);
+  const headAvatar = () => (story.isGroup
+    ? avatar(chatAvaUrl(), story.chatTitle, '#5c6bc0')
+    : avaOf(story.others[0] || story.chatTitle));
 
   // ---------- Каркас экрана ----------
   const titleEl = h('div', { class: 'top-title' }, story.chatTitle);
   const subEl = h('div', { class: 'top-sub' });
-  const headAva = story.isGroup
-    ? avatar(resolve(story.chatAvatar), story.chatTitle, '#5c6bc0')
-    : avaOf(story.others[0] || story.chatTitle);
-  const backBtn = iconBtn('back', () => { if (!chat.classList.contains('rec')) onExit(); });
+  let headAva = headAvatar();
   const top = h('header', { class: 'top' },
-    backBtn, headAva, h('div', { class: 'top-titles' }, titleEl, subEl),
+    iconBtn('back', () => onExit()), headAva, h('div', { class: 'top-titles' }, titleEl, subEl),
     iconBtn('people', openTrust, 'hide-rec'),
     iconBtn('dots', openMenu, 'hide-rec'),
   );
@@ -35,8 +45,11 @@ export async function openChat(root, rec, { onExit }) {
   const feed = h('div', { class: 'feed' }, list);
   const bottom = h('div', { class: 'bottom' });
   const toasts = h('div', { class: 'toasts' });
-  const chat = h('div', { class: 'chat' }, h('div', { class: 'chat-bg' }), top, feed, bottom, toasts);
+  const bgLayer = h('div', { class: 'chat-bg' });
+  const chat = h('div', { class: 'chat' + (settings.recording ? ' rec' : '') },
+    bgLayer, h('div', { class: 'chat-shade' }), top, feed, bottom, toasts);
   root.replaceChildren(chat);
+  paintChatBg(bgLayer);
 
   const idleSub = () => (story.isGroup ? plural('members', story.charOrder.length) : '');
   const setSub = (text, typing = false) => { subEl.textContent = text; subEl.classList.toggle('typing', typing); };
@@ -53,18 +66,31 @@ export async function openChat(root, rec, { onExit }) {
     return m;
   }
 
-  function imgEl(file, cls) {
+  function imgEl(file) {
     const url = resolve(file);
     if (!url) return h('div', { class: 'photo-missing' }, `${t('photo')}: ${file}`);
-    const img = h('img', { src: url, alt: '', draggable: 'false', class: cls || null });
+    const img = h('img', { src: url, alt: '', draggable: 'false' });
     img.addEventListener('load', () => { if (nearBottom()) scrollDown(false); });
     img.addEventListener('click', () => viewer(url));
     return img;
   }
 
+  function videoEl(file) {
+    const url = resolve(file);
+    if (!url) return h('div', { class: 'photo-missing' }, `${t('video')}: ${file}`);
+    const v = h('video', { src: url + '#t=0.1', muted: true, playsinline: true, preload: 'metadata' });
+    v.addEventListener('loadedmetadata', () => { if (nearBottom()) scrollDown(false); });
+    return h('div', { class: 'video-box', onclick: () => viewer(url, true) }, v, h('div', { class: 'play-icon' }, '▶'));
+  }
+
   function renderItem(item, prev, next, read, animate) {
+    if (hiddenBySettings(item)) return null;
+    // Фото или видео выключены, но есть подпись — показываем только подпись
+    if (item.t === 'msg' && ((item.kind === 'photo' && !settings.showPhotos) || (item.kind === 'video' && !settings.showVideos))) {
+      item = { ...item, kind: 'text' };
+    }
     if (item.t === 'date' || item.t === 'system') {
-      return h('div', { class: 'sys' + (animate ? ' new' : '') }, item.text);
+      return h('div', { class: 'sys' + (animate ? ' new' : '') }, emo(item.text));
     }
     if (item.t === 'end') {
       return h('div', { class: 'endcard' },
@@ -84,17 +110,17 @@ export async function openChat(root, rec, { onExit }) {
     const nameEl = (!item.me && story.isGroup && runStart) ? h('div', { class: 'name', style: { color: c.color } }, item.who) : null;
 
     if (item.kind === 'sticker') {
-      const st = h('div', { class: 'sticker' }, nameEl, imgEl(item.file), metaEl(item, read));
-      row.append(st);
-    } else if (item.kind === 'photo') {
-      const b = h('div', { class: 'bubble photo' + (item.text ? '' : ' no-caption') }, nameEl, imgEl(item.file));
-      if (item.text) b.append(h('div', { class: 'caption text' }, item.text, metaEl(item, read)));
+      row.append(h('div', { class: 'sticker' }, nameEl, imgEl(item.file), metaEl(item, read)));
+    } else if (item.kind === 'photo' || item.kind === 'video') {
+      const media = item.kind === 'photo' ? imgEl(item.file) : videoEl(item.file);
+      const b = h('div', { class: 'bubble photo' + (item.text ? '' : ' no-caption') }, nameEl, media);
+      if (item.text) b.append(h('div', { class: 'caption text' }, emo(item.text), metaEl(item, read)));
       else b.append(metaEl(item, read));
       row.append(b);
     } else if (item.kind === 'deleted') {
-      row.append(h('div', { class: 'bubble' }, nameEl, h('div', { class: 'text deleted' }, '🚫 ' + t('deleted'), metaEl(item, read))));
+      row.append(h('div', { class: 'bubble' }, nameEl, h('div', { class: 'text deleted' }, emo('🚫 ' + t('deleted')), metaEl(item, read))));
     } else {
-      row.append(h('div', { class: 'bubble' }, nameEl, h('div', { class: 'text' }, item.text, metaEl(item, read))));
+      row.append(h('div', { class: 'bubble' }, nameEl, h('div', { class: 'text' }, emo(item.text), metaEl(item, read))));
     }
     rows.set(item.id, row);
     return row;
@@ -118,7 +144,8 @@ export async function openChat(root, rec, { onExit }) {
     cancelTyping();
     rows.clear();
     list.replaceChildren();
-    const log = engine.state.log;
+    titleEl.textContent = emo(story.chatTitle);
+    const log = engine.state.log.filter((it) => !hiddenBySettings(it));
     const read = computeRead(log);
     log.forEach((it, i) => list.append(renderItem(it, log[i - 1], log[i + 1], read.has(it.id), false)));
     renderBottom();
@@ -126,8 +153,15 @@ export async function openChat(root, rec, { onExit }) {
     requestAnimationFrame(() => scrollDown(false));
   }
 
+  function refreshHeader() {
+    const a = headAvatar();
+    headAva.replaceWith(a);
+    headAva = a;
+  }
+
   function appendItem(item) {
-    const log = engine.state.log;
+    if (hiddenBySettings(item)) return;
+    const log = engine.state.log.filter((it) => !hiddenBySettings(it));
     const prev = log[log.length - 2];
     if (prev && prev.t === 'msg' && item.t === 'msg' && prev.who === item.who) {
       const pr = rows.get(prev.id);
@@ -149,20 +183,48 @@ export async function openChat(root, rec, { onExit }) {
     feed.scrollTo({ top: feed.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
   }
 
-  // ---------- Нижняя панель: поле ввода или кнопки выбора ----------
+  // ---------- Нижняя панель: Start, поле ввода или кнопки выбора ----------
+  let typeTimer = null;
+  const isFresh = () => engine.state.log.length === 0 && engine.state.ended === null && !engine.state.atChoice;
+
+  function fakeInputBar(extra = []) {
+    return h('div', { class: 'inputbar' },
+      h('div', { class: 'ib', html: ICONS.smile }),
+      h('div', { class: 'fake-input' }, t('inputPlaceholder')),
+      h('div', { class: 'ib', html: ICONS.clip }),
+      h('div', { class: 'ib', html: ICONS.mic }),
+      ...extra);
+  }
+
   function renderBottom() {
+    clearInterval(typeTimer);
     const choice = engine.currentChoice();
-    if (choice) {
-      const box = h('div', { class: 'choices' });
-      choice.options.forEach((o, i) => box.append(h('button', { class: 'choice', type: 'button', onclick: () => choose(i) }, o.label)));
+    if (isFresh()) {
+      bottom.replaceChildren(h('div', { class: 'start-zone' },
+        h('button', { class: 'start-btn', type: 'button', onclick: () => onTap(true) }, t('start'))));
+    } else if (choice && choice.options.length === 1 && choice.options[0].text) {
+      // Один вариант: текст сам «печатается» в поле ввода, нажатие — отправить
+      const opt = choice.options[0];
+      const field = h('div', { class: 'fake-input typed' });
+      const send = h('div', { class: 'send-btn', html: ICONS.send });
+      const bar = h('div', { class: 'inputbar choice-zone single', role: 'button', onclick: () => choose(0) },
+        h('div', { class: 'ib', html: ICONS.smile }), field, send);
+      bottom.replaceChildren(opt.desc ? h('div', { class: 'single-desc' }, `(${emo(opt.desc)})`) : '', bar);
+      let i = 0;
+      const full = emo(opt.text);
+      typeTimer = setInterval(() => {
+        i += Math.max(1, Math.ceil(full.length / 40));
+        field.textContent = full.slice(0, i);
+        if (i >= full.length) { clearInterval(typeTimer); send.classList.add('ready'); }
+      }, 28);
+    } else if (choice) {
+      const box = h('div', { class: 'choices choice-zone' + (choice.options.length > 1 ? ' many' : '') });
+      choice.options.forEach((o, i) => box.append(h('button', { class: 'choice', type: 'button', onclick: () => choose(i) },
+        h('span', { class: 'choice-label' }, emo(o.label)),
+        o.desc ? h('span', { class: 'choice-desc' }, `(${emo(o.desc)})`) : null)));
       bottom.replaceChildren(box);
     } else {
-      bottom.replaceChildren(h('div', { class: 'inputbar' },
-        h('div', { class: 'ib', html: ICONS.smile }),
-        h('div', { class: 'fake-input' }, t('inputPlaceholder')),
-        h('div', { class: 'ib', html: ICONS.clip }),
-        h('div', { class: 'ib', html: ICONS.mic }),
-      ));
+      bottom.replaceChildren(fakeInputBar());
     }
     requestAnimationFrame(() => { if (nearBottom()) scrollDown(false); });
   }
@@ -208,9 +270,9 @@ export async function openChat(root, rec, { onExit }) {
     }
   }
 
-  function showToasts(list_) {
+  function showToasts(items) {
     if (!settings.trustToast) return;
-    list_.filter((x) => x.who !== story.me).forEach((x, i) => {
+    items.filter((x) => x.who !== story.me).forEach((x, i) => {
       setTimeout(() => {
         const el = h('div', { class: 'toast' },
           h('span', { class: 'arrow ' + (x.delta >= 0 ? 'up' : 'down') }, x.delta >= 0 ? '▲' : '▼'),
@@ -223,16 +285,28 @@ export async function openChat(root, rec, { onExit }) {
 
   // ---------- Тап по свободному месту ----------
   let busy = false;
-  async function onTap() {
+  async function onTap(fromStart = false) {
     if (typing) { typing.done(); return; }
     if (busy) return;
     const s = engine.state;
     if (s.ended !== null) return;
-    if (s.atChoice) { nudgeChoices(); return; }
+    if (isFresh() && !fromStart) { pulse(bottom.querySelector('.start-btn')); return; }
+    if (s.atChoice) { pulse(bottom.querySelector('.choice-zone')); return; }
     let ctx;
-    try { ctx = engine.step(); } catch (e) { flashMsg(e.message, 4000); return; }
+    try {
+      ctx = engine.step();
+      // Сообщение скрыто настройками (например, выключены фото) — сразу берём следующее
+      while (ctx && ctx.item && hiddenBySettings(ctx.item) && !ctx.choice && s.ended === null) {
+        const more = engine.step();
+        if (!more) break;
+        more.effects = [...ctx.effects, ...more.effects];
+        more.toasts = [...ctx.toasts, ...more.toasts];
+        ctx = more;
+      }
+    } catch (e) { flashMsg(e.message, 4000); return; }
     if (!ctx) return;
     save();
+    if (fromStart) renderBottom();
     busy = true;
     const myGen = gen;
     try {
@@ -250,10 +324,9 @@ export async function openChat(root, rec, { onExit }) {
     } finally { busy = false; }
   }
 
-  function nudgeChoices() {
-    const box = bottom.querySelector('.choices');
-    if (!box) return;
-    box.classList.remove('nudge'); void box.offsetWidth; box.classList.add('nudge');
+  function pulse(el) {
+    if (!el) return;
+    el.classList.remove('nudge'); void el.offsetWidth; el.classList.add('nudge');
   }
 
   function choose(i) {
@@ -285,7 +358,7 @@ export async function openChat(root, rec, { onExit }) {
       if (performance.now() - d.t > TAP_MAX_TIME) return;
       if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > TAP_MAX_MOVE) return;
       if (Math.abs(feed.scrollTop - d.scroll) > 2) return;
-      if (e.target.closest('.bubble:not(.typing-row .bubble), .sticker, button, a, input, .endcard, .choices')) return;
+      if (e.target.closest('.bubble:not(.typing-row .bubble), .sticker, button, a, input, .endcard, .choice-zone, .start-zone')) return;
       const sel = window.getSelection();
       if (sel && sel.toString()) return;
       onTap();
@@ -299,11 +372,10 @@ export async function openChat(root, rec, { onExit }) {
     const item = (icon, label, fn) => h('button', { type: 'button', onclick: () => { back.remove(); fn(); } },
       h('span', { html: ICONS[icon] }), label);
     const menu = h('div', { class: 'menu' },
+      item('palette', t('chatSettings'), openChatSettings),
       item('restart', t('menuRestart'), () => { if (confirm(t('confirmRestart'))) restart(); }),
       item('undo', t('menuBackOne'), backOne),
       item('undoChoice', t('menuBackChoice'), backChoice),
-      item('camera', t('menuRecord'), recordOn),
-      item('gear', t('menuSettings'), () => openSettings(renderAll)),
     );
     const back = h('div', { class: 'menu-back', onclick: (e) => { if (e.target === back) back.remove(); } }, menu);
     document.body.append(back);
@@ -316,6 +388,9 @@ export async function openChat(root, rec, { onExit }) {
   }
   function backOne() {
     if (!engine.backOne()) { flashMsg(t('nothingToUndo')); return; }
+    // Скрытые настройками сообщения пропускаем и при откате
+    const lastHidden = () => { const l = engine.state.log; return l.length && hiddenBySettings(l[l.length - 1]); };
+    while (lastHidden() && engine.snapshots.length) engine.backOne();
     save(); renderAll();
   }
   function backChoice() {
@@ -323,27 +398,62 @@ export async function openChat(root, rec, { onExit }) {
     save(); renderAll();
   }
 
-  // ---------- Режим съёмки ----------
-  const standalone = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
-  function recordOn() {
-    chat.classList.add('rec');
-    if (!standalone && document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+  // ---------- Смена фото героя или чата ----------
+  async function changePhoto(name) {
+    const file = await pickImage();
+    if (!file) return false;
+    try {
+      const blob = await makeAvatar(file);
+      custom.set(name, await saveAsset(avKey(name), blob));
+      refreshHeader();
+      renderAll();
+      flashMsg(t('photoSaved'));
+      return true;
+    } catch (e) { flashMsg(e.message, 4000); return false; }
+  }
+  async function resetPhoto(name) {
+    await removeAsset(avKey(name));
+    custom.delete(name);
+    refreshHeader();
+    renderAll();
+  }
+
+  function heroRow(name, label, color, url) {
+    const a = avatar(url, label, color);
+    const row = h('div', { class: 'hero-row' },
+      a,
+      h('div', { class: 'hero-name', style: { color } }, label),
+      h('button', { type: 'button', class: 'btn-small', onclick: async () => {
+        if (await changePhoto(name)) row.replaceWith(heroRow(name, label, color, name === CHAT_KEY ? chatAvaUrl() : avaUrl(name)));
+      } }, t('changePhoto')),
+      custom.has(name) ? h('button', { type: 'button', class: 'btn-small ghost', onclick: async () => {
+        await resetPhoto(name);
+        row.replaceWith(heroRow(name, label, color, name === CHAT_KEY ? chatAvaUrl() : avaUrl(name)));
+      } }, t('photoReset')) : null,
+    );
+    return row;
+  }
+
+  // ---------- Настройки чата: тема, фон, фото героев ----------
+  function openChatSettings() {
+    const onChange = () => paintChatBg(bgLayer);
+    const heroes = h('div', { class: 'set-block' }, h('div', { class: 'set-title' }, t('heroes')));
+    if (story.isGroup) heroes.append(heroRow(CHAT_KEY, t('chatPhoto'), '#5c6bc0', chatAvaUrl()));
+    for (const name of story.charOrder) {
+      const c = char(name);
+      heroes.append(heroRow(name, name, c.color, avaUrl(name)));
     }
-    flashMsg(t('recordOn'), 2600);
+    heroes.append(h('div', { class: 'set-hint small' }, LIMITS.avatar.hint));
+    const content = h('div', {},
+      h('h2', {}, t('chatSettings')),
+      themeSection(onChange),
+      backgroundSection(onChange),
+      heroes,
+      togglesSection(renderAll),
+    );
+    const s = sheet(content);
+    content.append(h('button', { class: 'btn-wide', type: 'button', onclick: () => s.close() }, t('close')));
   }
-  function recordOff() {
-    chat.classList.remove('rec');
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    flashMsg(t('recordOff'));
-  }
-  let lpTimer = null;
-  top.addEventListener('pointerdown', () => {
-    if (!chat.classList.contains('rec')) return;
-    lpTimer = setTimeout(recordOff, LONG_PRESS);
-  });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => top.addEventListener(ev, () => clearTimeout(lpTimer)));
-  top.addEventListener('contextmenu', (e) => e.preventDefault());
 
   // ---------- Персонажи и доверие ----------
   function openTrust() {
@@ -365,10 +475,13 @@ export async function openChat(root, rec, { onExit }) {
     const c = char(name);
     const v = engine.state.trust[name] ?? 5;
     const big = avaOf(name);
-    big.addEventListener('click', () => { const u = resolve(c.avatar); if (u) viewer(u); });
-    sheet(h('div', { class: 'profile' },
+    big.addEventListener('click', () => { const u = avaUrl(name); if (u) viewer(u); });
+    const s = sheet(h('div', { class: 'profile' },
       big,
       h('div', { class: 'p-name', style: { color: c.color } }, name),
+      h('button', { type: 'button', class: 'btn-small', onclick: async () => {
+        if (await changePhoto(name)) { s.close(); openProfile(name); }
+      } }, t('changePhoto')),
       h('div', { class: 'p-section' }, h('div', { class: 'p-label' }, t('about')), c.about || t('noAbout')),
       h('div', { class: 'p-section' }, h('div', { class: 'p-label' }, `${t('trustLabel')}: ${v}/10`),
         h('div', { class: 'bar' }, h('i', { style: barStyle(v) }))),

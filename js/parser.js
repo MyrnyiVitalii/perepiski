@@ -109,18 +109,23 @@ export function parseStory(text) {
       let last = scene.items[scene.items.length - 1];
       if (!last || last.t !== 'choice') { last = { t: 'choice', options: [], line: ln }; push(last); }
       if (last.options.length >= 3) err(ln, 'Больше 3 кнопок выбора подряд');
-      last.options.push({ label: m[1], text: m[1], target: sceneKey(m[2]), trust: [], flags: [], line: ln });
+      // «Текст кнопки (пояснение)» — пояснение в скобках показывается мелко под кнопкой
+      let label = m[1], desc = '';
+      const pm = label.match(/^(.*?)\s*\(([^()]+)\)\s*$/);
+      if (pm && pm[1]) { label = pm[1]; desc = pm[2].trim(); }
+      last.options.push({ label, desc, text: label, target: sceneKey(m[2]), trust: [], flags: [], line: ln });
       lastMsg = null;
       continue;
     }
 
     // Уточнения к кнопке
-    const dm = line.match(/^(текст|доверие|запомнить)\s*:\s*(.*)$/i);
+    const dm = line.match(/^(текст|доверие|запомнить|пояснение)\s*:\s*(.*)$/i);
     const lastNode = scene.items[scene.items.length - 1];
     if (dm && lastNode && lastNode.t === 'choice') {
       const opt = lastNode.options[lastNode.options.length - 1];
       const k = dm[1].toLowerCase(), v = dm[2].trim();
       if (k === 'текст') opt.text = v === '-' ? '' : v;
+      else if (k === 'пояснение') opt.desc = v;
       else if (k === 'доверие') {
         for (const part of v.split(',')) {
           const tm = part.trim().match(/^(.+?)\s*([+-]\d+)$/);
@@ -253,6 +258,8 @@ function parseSceneLine(line, ln, err) {
     const msg = { t: 'msg', who, kind: 'text', text: body, file: '', line: ln };
     let bm = body.match(/^\[\s*фото\s+([^\]]+?)\s*\]\s*(.*)$/i);
     if (bm) { msg.kind = 'photo'; msg.file = bm[1]; msg.text = bm[2]; return msg; }
+    bm = body.match(/^\[\s*видео\s+([^\]]+?)\s*\]\s*(.*)$/i);
+    if (bm) { msg.kind = 'video'; msg.file = bm[1]; msg.text = bm[2]; return msg; }
     bm = body.match(/^\[\s*стикер\s+([^\]]+?)\s*\]\s*$/i);
     if (bm) { msg.kind = 'sticker'; msg.file = bm[1]; msg.text = ''; return msg; }
     if (/^\[\s*удалено\s*\]$/i.test(body)) { msg.kind = 'deleted'; msg.text = ''; return msg; }

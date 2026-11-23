@@ -39,6 +39,8 @@ function showErrors(rec) {
 }
 
 async function route() {
+  // При переходе между экранами закрываем открытые шторки, меню и просмотр фото
+  document.querySelectorAll('.sheet-back, .menu-back, .viewer').forEach((el) => el.remove());
   const m = location.hash.match(/^#chat\/(.+)$/);
   if (m) {
     const rec = records.find((r) => r.id === decodeURIComponent(m[1]));
