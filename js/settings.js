@@ -209,20 +209,32 @@ export function hiddenBySettings(item) {
 
 // Настройки с главного экрана
 export function openSettings(onChange) {
-  const name = h('input', { class: 'set-input', type: 'text', value: settings.appName, maxlength: '40' });
-  name.addEventListener('change', () => {
-    settings.appName = name.value.trim() || t('appName');
+  // Название приложения: меняется кнопкой «Применить» (или Enter); если просто закрыть настройки — тоже сохранится
+  const name = h('input', { class: 'set-input', type: 'text', value: settings.appName, maxlength: '40', enterkeyhint: 'done' });
+  const applyBtn = h('button', { type: 'button', class: 'btn-small name-apply' }, t('apply'));
+  const applyName = (quiet) => {
+    const v = name.value.trim() || t('appName');
+    name.value = v;
+    applyBtn.classList.remove('ready');
+    if (v === settings.appName) return;
+    settings.appName = v;
     saveSettings();
     onChange && onChange();
-  });
+    if (!quiet) flashMsg(t('appNameSaved'));
+  };
+  name.addEventListener('input', () => applyBtn.classList.toggle('ready', name.value.trim() !== settings.appName));
+  name.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); name.blur(); applyName(); } });
+  applyBtn.addEventListener('click', () => { name.blur(); applyName(); });
   const content = h('div', {},
     h('h2', {}, t('settingsTitle')),
-    h('div', { class: 'set-block' }, h('div', { class: 'set-title' }, t('setAppName')), name),
+    h('div', { class: 'set-block' }, h('div', { class: 'set-title' }, t('setAppName')),
+      h('div', { class: 'name-row' }, name, applyBtn),
+      h('div', { class: 'set-hint small' }, t('appNameHint'))),
     themeSection(onChange),
     backgroundSection(onChange),
     togglesSection(onChange),
   );
-  const s = sheet(content);
+  const s = sheet(content, () => applyName(true));
   const closeBtn = h('button', { class: 'btn-wide', type: 'button', onclick: () => s.close() }, t('close'));
   content.append(closeBtn);
   soundSection().then((sec) => content.insertBefore(sec, closeBtn));

@@ -35,6 +35,9 @@ export const ICONS = {
   palette: svg('<circle cx="13.5" cy="6.5" r="1.2" fill="currentColor"/><circle cx="17.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="8.5" cy="7.5" r="1.2" fill="currentColor"/><circle cx="6.5" cy="12.5" r="1.2" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.5-.75 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/>'),
   copy: svg('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
   down: svg('<path d="M6 9l6 6 6-6"/>'),
+  bookmark: svg('<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>'),
+  edit: svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
+  trash: svg('<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>'),
   reply: svg('<path d="M9 17l-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>'),
   pin: svg('<path d="M12 17v5"/><path d="M9 10.76V6h6v4.76l2.5 3.24H6.5z"/><path d="M8 2h8"/>'),
   volume: svg('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>'),
@@ -70,20 +73,29 @@ export function flashMsg(text, ms = 2200) {
 // а не выкидывают из чата.
 const overlays = [];
 let ignorePop = 0;
+let deferredPush = 0; // окошко открыли, пока браузер ещё не закончил шаг «назад» от прошлого окошка
 export function pushOverlay(closeFn) {
   overlays.push(closeFn);
-  history.pushState({ overlay: overlays.length }, '');
+  // Если предыдущее окошко только что закрылось и браузер ещё делает «назад» —
+  // новую запись в историю добавим после этого шага, иначе следующий «назад» уведёт с экрана.
+  if (ignorePop > 0) deferredPush += 1;
+  else history.pushState({ overlay: overlays.length }, '');
 }
 export function popOverlay(closeFn) {
   const i = overlays.indexOf(closeFn);
   if (i < 0) return;
   overlays.splice(i, 1);
+  if (deferredPush > 0) { deferredPush -= 1; return; } // запись ещё не добавлена — и убирать нечего
   ignorePop += 1;
   history.back();
 }
-export function clearOverlays() { overlays.length = 0; }
+export function clearOverlays() { overlays.length = 0; deferredPush = 0; }
 window.addEventListener('popstate', () => {
-  if (ignorePop > 0) { ignorePop -= 1; return; }
+  if (ignorePop > 0) {
+    ignorePop -= 1;
+    if (ignorePop === 0) for (; deferredPush > 0; deferredPush -= 1) history.pushState({ overlay: overlays.length }, '');
+    return;
+  }
   const fn = overlays.pop();
   if (fn) fn(true);
 });
@@ -155,4 +167,30 @@ export function viewer(url, isVideo = false) {
   swipeDownToClose(media, close, v);
   document.body.append(v);
   pushOverlay(close);
+}
+
+// Окошко-вопрос с кнопками «Да» / «Нет» (вместо стандартного confirm браузера).
+// Возвращает Promise: true — «Да», false — «Нет», нажатие мимо окна или кнопка «Назад» телефона.
+export function askYesNo(title, text, { yes = 'Да', no = 'Нет', danger = false } = {}) {
+  return new Promise((resolve) => {
+    let closed = false;
+    const close = (answer, fromBack) => {
+      if (closed) return;
+      closed = true;
+      back.remove();
+      if (fromBack !== true) popOverlay(onBack);
+      resolve(answer);
+    };
+    const onBack = (fromBack) => close(false, fromBack);
+    const box = h('div', { class: 'dlg', role: 'dialog' },
+      h('div', { class: 'dlg-title' }, title),
+      text ? h('div', { class: 'dlg-text' }, text) : null,
+      h('div', { class: 'dlg-btns' },
+        h('button', { type: 'button', class: 'dlg-btn', onclick: () => close(false) }, no),
+        h('button', { type: 'button', class: 'dlg-btn' + (danger ? ' danger' : ''), onclick: () => close(true) }, yes)),
+    );
+    const back = h('div', { class: 'dlg-back', onclick: (e) => { if (e.target === back) close(false); } }, box);
+    document.body.append(back);
+    pushOverlay(onBack);
+  });
 }

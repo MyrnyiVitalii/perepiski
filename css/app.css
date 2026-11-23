@@ -530,3 +530,51 @@ button.back-to-choices svg { width: 24px; height: 24px; }
 .bgp-msg { height: 22px; border-radius: 11px; width: 70%; background: var(--in-bg); opacity: .95; }
 .bgp-msg.out { align-self: flex-end; width: 60%; background: var(--out-bg); }
 .bgp-msg.short { width: 45%; }
+
+/* ===== Окошко «Да / Нет» ===== */
+.dlg-back { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .55); display: flex; align-items: center; justify-content: center; padding: 24px; animation: fade .2s both; }
+.dlg { width: 100%; max-width: 340px; padding: 20px 20px 10px; border-radius: 14px; background: var(--sheet-bg); color: var(--sheet-text);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .5); animation: pop .18s ease-out both; }
+.dlg-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+.dlg-text { font-size: 15px; line-height: 1.4; opacity: .85; }
+.dlg-btns { display: flex; justify-content: flex-end; gap: 6px; margin-top: 16px; }
+.dlg-btn { min-width: 72px; padding: 10px 16px; border-radius: 10px; font-size: 15px; font-weight: 600; color: var(--accent); }
+.dlg-btn:active { background: rgba(255, 255, 255, .08); }
+.dlg-btn.danger { color: var(--danger); }
+
+/* ===== Свайп чата в списке влево — кнопка «Удалить» (как в Telegram) ===== */
+.story-row { position: relative; overflow: hidden; touch-action: pan-y; }
+.story-row .story { position: relative; z-index: 1; background: var(--bg); transition: transform .22s ease; }
+.story-row.dragging .story { transition: none; }
+.story-del { position: absolute; top: 0; right: 0; bottom: 0; width: 88px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: var(--danger); color: #fff; font-size: 13px; font-weight: 500; }
+.story-del svg { width: 24px; height: 24px; }
+.story-row.removing { transition: max-height .25s ease, opacity .25s ease; opacity: 0; }
+
+/* ===== «Избранное» ===== */
+.saved-ava { background: var(--accent); color: #fff; display: grid; place-items: center; }
+.saved-ava svg { width: 52%; height: 52%; }
+.story.saved .story-title .pin-mark { margin-left: auto; color: var(--list-sub); width: 16px; height: 16px; flex: none; }
+.story.saved .story-title .pin-mark svg { width: 16px; height: 16px; }
+.notes-empty { align-self: center; margin: auto 24px 24px; max-width: 320px; padding: 20px; border-radius: 18px; text-align: center;
+  background: rgba(0, 0, 0, .35); color: #fff; }
+.ne-icon { width: 64px; height: 64px; margin: 0 auto 10px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; }
+.ne-icon svg { width: 32px; height: 32px; }
+.ne-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+.ne-text { font-size: 14px; line-height: 1.4; opacity: .85; }
+.np-thumb { width: 42px; height: 42px; border-radius: 6px; object-fit: cover; flex: none; }
+.notes-bar .notes-clip { border: 0; background: none; cursor: pointer; align-self: flex-end; }
+.notes .real-input::placeholder { color: var(--bottom-text); }
+.notes .bubble .text, .notes .bubble .caption { -webkit-user-select: none; user-select: none; }
+.react-actions button.danger { color: var(--danger); }
+.react-actions button span { display: inline-grid; vertical-align: middle; margin-right: 10px; }
+.react-actions button span svg { width: 20px; height: 20px; }
+.react-actions button { display: flex; align-items: center; text-align: left; }
+.react-actions button span { display: grid; flex: none; }
+.notes .react-pop { min-width: 210px; }
+.name-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.name-row .set-input { margin-top: 0; flex: 1; min-width: 0; }
+.name-apply { padding: 10px 14px; opacity: .5; transition: opacity .2s; }
+.name-apply.ready { opacity: 1; }
+.notes .react-actions { display: flex; flex-direction: column; gap: 6px; }
+.notes .react-actions button { width: 100%; }
