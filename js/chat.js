@@ -721,12 +721,12 @@ export async function openChat(root, rec, { onExit, onNext }) {
         // в новой сцене останавливаемся на её первом сообщении (до него – плашка с датой, она не в счёт)
         if (engine.state.scene !== firstScene && last && last.t !== 'date') break;
         if (engine.state.scene === firstScene && count('msg') >= 6) break;
-        // перед сменой сцены (дальше в этой сцене только переход) – пауза длиннее, чтобы хук «повисел»
+        // перед сменой сцены (дальше в этой сцене только переход) – пауза 2,5 с (просьба Иры), чтобы хук «повисел»
         const sc = story.scenes[engine.state.scene];
         let k = engine.state.index;
         while (sc && k < sc.items.length && !['msg', 'date', 'system', 'choice', 'jump', 'end'].includes(sc.items[k].t)) k++;
         const sceneEnds = !sc || k >= sc.items.length || sc.items[k].t === 'jump';
-        await pause(last && last.t === 'date' ? 1600 : sceneEnds ? 2000 : 1100);
+        await pause(last && last.t === 'date' ? 1600 : sceneEnds ? 2500 : 1100);
         if (myGen !== gen) return;
         await onTap();
       }
