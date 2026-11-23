@@ -4,7 +4,7 @@ import { t, plural } from './i18n.js';
 import { Engine, snippet } from './engine.js';
 import { db } from './storage.js';
 import { settings, saveSettings, paintChatBg, themeSection, backgroundSection, togglesSection, soundSection, emo, hiddenBySettings } from './settings.js';
-import { pickImage, makeAvatar, saveAsset, assetUrl, removeAsset, LIMITS } from './images.js';
+import { pickImage, cropAvatar, saveAsset, assetUrl, removeAsset, LIMITS } from './images.js';
 import { play, vibrate, vibrateForEffect, unlockAudio } from './sounds.js';
 import { signalGlitch, tvNoise } from './fx.js';
 
@@ -976,7 +976,9 @@ export async function openChat(root, rec, { onExit, onNext }) {
     const file = await pickImage();
     if (!file) return false;
     try {
-      const blob = await makeAvatar(file);
+      // окно предпросмотра: сдвинуть, приблизить, «Готово» или «Отмена»
+      const blob = await cropAvatar(file);
+      if (!blob) return false;
       custom.set(name, await saveAsset(avKey(name), blob));
       refreshHeader();
       renderAll();

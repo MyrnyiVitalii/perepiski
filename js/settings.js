@@ -3,7 +3,7 @@ import { db } from './storage.js';
 import { t } from './i18n.js';
 import { h, sheet, flashMsg } from './ui.js';
 import { THEMES, applyTheme } from './themes.js';
-import { pickImage, makeBackground, saveAsset, assetUrl, removeAsset, LIMITS } from './images.js';
+import { pickImage, makeBackground, confirmBackground, saveAsset, assetUrl, removeAsset, LIMITS } from './images.js';
 
 export const settings = {
   appName: t('appName'),
@@ -107,6 +107,8 @@ export function backgroundSection(onChange) {
     if (!file) return;
     try {
       const blob = await makeBackground(file);
+      // предпросмотр: «Поставить» или «Отмена»
+      if (!(await confirmBackground(blob))) return;
       await saveAsset('bg', blob);
       settings.bgImage = true;
       await saveSettings();
