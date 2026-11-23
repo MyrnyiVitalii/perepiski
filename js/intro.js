@@ -11,6 +11,33 @@ export function introParts(story) {
   return { series: '', ep: 0, name: title };
 }
 
+// Переход между сценами: экран уходит в чёрное, по центру место и время, потом чат с новым фоном.
+// text: «Посёлок Светлый · 16:41» (часть после «·» — мелко). Нажатие пропускает. onDark — вызвать, пока экран чёрный.
+export function showTransition(text, onDark) {
+  return new Promise((resolve) => {
+    const [place, ...rest] = String(text || '').split('·');
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const box = h('div', { class: 'scene-cut' + (reduce ? ' reduce' : '') },
+      h('div', { class: 'intro-grain' }),
+      h('div', { class: 'sc-inner' },
+        h('div', { class: 'sc-place' }, place.trim().toUpperCase()),
+        rest.length ? h('div', { class: 'sc-time' }, rest.join('·').trim()) : null));
+    let finished = false;
+    const timers = [];
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      timers.forEach(clearTimeout);
+      box.classList.add('out');
+      setTimeout(() => { box.remove(); resolve(); }, 380);
+    };
+    box.addEventListener('click', () => { if (onDark) { onDark(); onDark = null; } finish(); });
+    document.body.append(box);
+    timers.push(setTimeout(() => { if (onDark) { onDark(); onDark = null; } }, 400));
+    timers.push(setTimeout(finish, reduce ? 900 : 1700));
+  });
+}
+
 export function showIntro(story, done) {
   const { series, ep, name } = introParts(story);
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;

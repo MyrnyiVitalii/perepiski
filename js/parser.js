@@ -271,6 +271,8 @@ function parseSceneLine(line, ln, err) {
         return { t: 'vibrate', pattern: ms > 0 ? [Math.min(ms, 3000)] : [400, 150, 400], line: ln };
       }
       case 'фон': return { t: 'bg', file: /^нет$/i.test(arg) ? '' : arg, line: ln };
+      // [переход Посёлок Светлый · 16:41] — затемнение между сценами с названием места и временем
+      case 'переход': return { t: 'transition', text: arg, line: ln };
       // [закрепить] или [закрепить Аня] — закрепить последнее сообщение; [открепить]
       case 'закрепить': return { t: 'pin', who: arg, line: ln };
       case 'открепить': return { t: 'unpin', line: ln };

@@ -167,6 +167,7 @@ export class Engine {
       case 'effect': ctx.effects.push(node.name); return 'next';
       case 'vibrate': ctx.vibro.push(node.pattern); return 'next';
       case 'bg': s.bg = node.file; ctx.bgChanged = true; return 'next';
+      case 'transition': ctx.transition = node.text; return 'next';
       case 'react': {
         // реакция ставится на последнее сообщение в ленте
         let target = null;

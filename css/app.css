@@ -645,3 +645,17 @@ button.back-to-choices svg { width: 24px; height: 24px; }
 
 .intro.reduce .intro-grain { animation: none; }
 .intro.reduce .il { animation: intro-fade .5s forwards; filter: none; transform: none; }
+
+/* ===== Переход между сценами: затемнение + место и время ===== */
+.scene-cut { position: fixed; inset: 0; z-index: 55; background: #040404; display: grid; place-items: center; cursor: pointer;
+  animation: sc-in .38s ease-out both; -webkit-user-select: none; user-select: none; overflow: hidden; }
+.scene-cut.out { animation: sc-out .38s ease-in forwards; }
+.sc-inner { position: relative; text-align: center; padding: 0 16px; }
+.sc-place { font: 400 clamp(18px, 5.4vw, 30px)/1.2 'IntroLabel', sans-serif; letter-spacing: .32em; margin-right: -.32em; color: #ebe3d6;
+  opacity: 0; animation: sc-text .7s .25s ease-out forwards; }
+.sc-time { margin-top: 12px; font: 400 14px/1 'IntroLabel', sans-serif; letter-spacing: .3em; margin-right: -.3em; color: #a3231b;
+  opacity: 0; animation: sc-text .7s .45s ease-out forwards; }
+.scene-cut.reduce .sc-place, .scene-cut.reduce .sc-time { animation: none; opacity: 1; }
+@keyframes sc-in { from { opacity: 0; } }
+@keyframes sc-out { to { opacity: 0; } }
+@keyframes sc-text { from { opacity: 0; transform: translateY(6px); letter-spacing: .5em; } to { opacity: 1; transform: none; } }

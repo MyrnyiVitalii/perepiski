@@ -7,7 +7,7 @@ import { settings, saveSettings, paintChatBg, themeSection, backgroundSection, t
 import { pickImage, cropAvatar, saveAsset, assetUrl, removeAsset, LIMITS } from './images.js';
 import { play, vibrate, vibrateForEffect, unlockAudio } from './sounds.js';
 import { signalGlitch, tvNoise } from './fx.js';
-import { showIntro } from './intro.js';
+import { showIntro, showTransition } from './intro.js';
 
 const TAP_MAX_MOVE = 10;     // пикселей: если палец сдвинулся больше — это прокрутка, а не тап
 const TAP_MAX_TIME = 350;    // миллисекунд: дольше — это долгое нажатие (выделение текста)
@@ -788,6 +788,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
         if (!more) break;
         for (const k of ['effects', 'toasts', 'sounds', 'vibro']) more[k] = [...ctx[k], ...more[k]];
         more.bgChanged = more.bgChanged || ctx.bgChanged;
+        more.transition = more.transition || ctx.transition;
         ctx = more;
       }
     } catch (e) { flashMsg(e.message, 4000); return; }
@@ -797,7 +798,11 @@ export async function openChat(root, rec, { onExit, onNext }) {
     busy = true;
     const myGen = gen;
     try {
-      if (ctx.bgChanged) applySceneBg(false);
+      // Переход между сценами: затемнение с местом и временем, фон меняется, пока экран чёрный
+      if (ctx.transition && settings.intro !== false) {
+        await showTransition(ctx.transition, () => { if (ctx.bgChanged) applySceneBg(true); });
+        if (myGen !== gen) return;
+      } else if (ctx.bgChanged) applySceneBg(false);
       if (ctx.item) {
         const it = ctx.item;
         // «печатает…» — только где оно стоит в истории, и до следующего нажатия
