@@ -394,3 +394,71 @@ body.no-avatars .row .ava { display: none; }
 .sound-chip button { padding: 6px 10px; font-size: 13.5px; }
 .sound-chip.own { box-shadow: inset 0 0 0 1px var(--accent); }
 .sound-chip .x { padding: 6px 9px 6px 2px; opacity: .6; }
+
+/* ===== Функции как в Telegram ===== */
+.chat { touch-action: pan-y; will-change: transform; }
+.top-titles { cursor: pointer; }
+
+/* закреплённое сообщение */
+.pin-bar { display: none; position: relative; z-index: 3; align-items: center; gap: 10px; padding: 6px 12px; min-height: 46px;
+  background: var(--header-bg); border-top: 1px solid var(--line); cursor: pointer; }
+.pin-bar.on { display: flex; animation: fade .25s both; }
+.pb-line { width: 2px; align-self: stretch; border-radius: 1px; background: var(--accent); }
+.pb-body { flex: 1; min-width: 0; }
+.pb-title { color: var(--accent); font-size: 13px; font-weight: 600; }
+.pb-text { color: var(--header-text); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-icon { color: var(--icon); width: 22px; height: 22px; }
+.pb-icon svg { width: 22px; height: 22px; }
+
+/* кнопка «вниз» */
+.down-btn { position: absolute; right: 12px; bottom: calc(76px + var(--safe-bottom)); z-index: 4; width: 46px; height: 46px; border-radius: 50%;
+  background: var(--header-bg); color: var(--icon); box-shadow: 0 3px 12px rgba(0, 0, 0, .35); display: grid; place-items: center;
+  opacity: 0; transform: scale(.6); pointer-events: none; transition: .2s; }
+.down-btn.on { opacity: 1; transform: none; pointer-events: auto; }
+.down-btn svg { width: 26px; height: 26px; }
+.down-count { position: absolute; top: -6px; right: -2px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--accent);
+  color: #fff; font-size: 12px; line-height: 20px; display: none; }
+.down-count.on { display: block; }
+
+/* ответ: полоска над кнопками и цитата в сообщении */
+.reply-bar { display: none; position: relative; z-index: 2; align-items: center; gap: 10px; padding: 8px 10px 6px 14px; background: var(--bottom-bg);
+  border-top: 1px solid var(--line); }
+.reply-bar.on { display: flex; }
+.rb-icon { color: var(--accent); width: 22px; height: 22px; flex: none; }
+.rb-icon svg { width: 22px; height: 22px; }
+.rb-body { flex: 1; min-width: 0; border-left: 2px solid; padding-left: 8px; }
+.rb-close { width: 34px; height: 34px; border-radius: 50%; color: var(--bottom-icon); flex: none; }
+.quote { border-left: 3px solid; border-radius: 4px; padding: 3px 8px; margin: 2px 0 4px; background: rgba(255, 255, 255, .07); cursor: pointer; max-width: 260px; }
+.bubble.photo .quote { margin: 4px 6px; }
+.q-name { font-size: 13px; font-weight: 600; line-height: 1.25; }
+.q-text { font-size: 13.5px; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+.fwd { font-size: 13px; color: var(--accent); margin-bottom: 2px; }
+.bubble.photo .fwd { padding: 3px 7px 0; }
+.meta .edited { margin-right: 3px; font-style: italic; }
+.row { transition: transform .2s; }
+.row.reply-ready .bubble { box-shadow: 0 0 0 2px var(--accent); }
+.row.flash .bubble, .row.flash .sticker { animation: msg-flash 1.2s ease-out; }
+@keyframes msg-flash { 0%, 40% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+/* спойлер: текст скрыт «шумом», нажатие — показать */
+.spoiler { border-radius: 4px; color: transparent; cursor: pointer; transition: color .3s, background .3s;
+  background: repeating-linear-gradient(45deg, rgba(160, 160, 160, .55) 0 2px, rgba(90, 90, 90, .55) 2px 4px);
+  background-size: 6px 6px; animation: spoiler-noise .6s steps(3) infinite; }
+.spoiler.open { color: inherit; background: rgba(255, 255, 255, .08); animation: none; }
+@keyframes spoiler-noise { 0% { background-position: 0 0; } 33% { background-position: 2px 3px; } 66% { background-position: -3px 1px; } }
+
+/* информация о чате */
+.p-sub { color: var(--header-sub); font-size: 14px; margin-top: 2px; }
+.members .member { display: flex; gap: 12px; align-items: center; width: 100%; padding: 8px 0; text-align: left; }
+.members .member .ava { --ava: 42px; }
+.m-body { flex: 1; min-width: 0; }
+.m-name { font-weight: 600; }
+.m-about { font-size: 13px; opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* «Продолжение следует…» не исчезает: точки бегут, надпись «дышит» */
+.tbc-text { animation: tbc-in 2.4s ease-out both, tbc-breathe 3.2s ease-in-out 2.4s infinite; }
+@keyframes tbc-breathe { 50% { text-shadow: 0 0 46px rgba(229, 57, 53, 1); transform: scale(1.03); } }
+.tbc-dots i { font-style: normal; animation: tbc-dot 1.5s infinite both; }
+.tbc-dots i:nth-child(2) { animation-delay: .25s; }
+.tbc-dots i:nth-child(3) { animation-delay: .5s; }
+@keyframes tbc-dot { 0%, 20% { opacity: 0; } 40%, 80% { opacity: 1; } 100% { opacity: 0; } }

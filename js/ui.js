@@ -33,6 +33,10 @@ export const ICONS = {
   mic: svg('<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/>'),
   send: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4l17.45-7.48a1 1 0 0 0 0-1.84L3.4 3.6a.99.99 0 0 0-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z"/></svg>',
   palette: svg('<circle cx="13.5" cy="6.5" r="1.2" fill="currentColor"/><circle cx="17.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="8.5" cy="7.5" r="1.2" fill="currentColor"/><circle cx="6.5" cy="12.5" r="1.2" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.5-.75 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/>'),
+  copy: svg('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
+  down: svg('<path d="M6 9l6 6 6-6"/>'),
+  reply: svg('<path d="M9 17l-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>'),
+  pin: svg('<path d="M12 17v5"/><path d="M9 10.76V6h6v4.76l2.5 3.24H6.5z"/><path d="M8 2h8"/>'),
   volume: svg('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>'),
   mute: svg('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>'),
   tick1: '<svg viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6l3 3L12 2"/></svg>',
@@ -61,13 +65,74 @@ export function flashMsg(text, ms = 2200) {
   setTimeout(() => el.remove(), ms);
 }
 
+// ---------- Кнопка «Назад» на Android ----------
+// Открытые окошки (шторки, меню, просмотр фото) закрываются кнопкой «Назад» телефона по очереди,
+// а не выкидывают из чата.
+const overlays = [];
+let ignorePop = 0;
+export function pushOverlay(closeFn) {
+  overlays.push(closeFn);
+  history.pushState({ overlay: overlays.length }, '');
+}
+export function popOverlay(closeFn) {
+  const i = overlays.indexOf(closeFn);
+  if (i < 0) return;
+  overlays.splice(i, 1);
+  ignorePop += 1;
+  history.back();
+}
+export function clearOverlays() { overlays.length = 0; }
+window.addEventListener('popstate', () => {
+  if (ignorePop > 0) { ignorePop -= 1; return; }
+  const fn = overlays.pop();
+  if (fn) fn(true);
+});
+export const hasOverlay = () => overlays.length > 0;
+
+// Свайп вниз закрывает окошко (как в Telegram)
+function swipeDownToClose(el, close, handle = el) {
+  let st = null;
+  handle.addEventListener('pointerdown', (e) => {
+    // если окошко прокручено вниз, сначала пусть прокрутится к началу
+    if (el.scrollTop > 0 || e.target.closest('input, .slider, .theme-list')) { st = null; return; }
+    st = { y: e.clientY, x: e.clientX, t: performance.now(), dy: 0 };
+  });
+  handle.addEventListener('pointermove', (e) => {
+    if (!st) return;
+    st.dy = e.clientY - st.y;
+    if (st.dy > 0 && Math.abs(e.clientX - st.x) < st.dy && el.scrollTop <= 0) {
+      el.style.transition = 'none';
+      el.style.transform = `translateY(${st.dy}px)`;
+    }
+  });
+  const end = () => {
+    if (!st) return;
+    const fast = st.dy > 40 && performance.now() - st.t < 250;
+    el.style.transition = '';
+    if (st.dy > 120 || fast) close();
+    else el.style.transform = '';
+    st = null;
+  };
+  handle.addEventListener('pointerup', end);
+  handle.addEventListener('pointercancel', end);
+}
+
 export function sheet(content, onClose) {
   const back = h('div', { class: 'sheet-back' });
   const panel = h('div', { class: 'sheet' }, h('div', { class: 'sheet-grip' }), content);
   back.append(panel);
-  const close = () => { back.remove(); onClose && onClose(); };
+  let closed = false;
+  const close = (fromBack) => {
+    if (closed) return;
+    closed = true;
+    back.remove();
+    if (fromBack !== true) popOverlay(close);
+    onClose && onClose();
+  };
   back.addEventListener('click', (e) => { if (e.target === back) close(); });
+  swipeDownToClose(panel, close, panel);
   document.body.append(back);
+  pushOverlay(close);
   return { close, panel };
 }
 
@@ -75,7 +140,19 @@ export function viewer(url, isVideo = false) {
   const media = isVideo
     ? h('video', { src: url, controls: true, autoplay: true, playsinline: true })
     : h('img', { src: url, alt: '' });
-  const close = h('button', { type: 'button', class: 'viewer-close', onclick: () => v.remove() }, '✕');
-  const v = h('div', { class: 'viewer', onclick: (e) => { if (e.target === v || !isVideo) v.remove(); } }, media, close);
+  let closed = false;
+  const close = (fromBack) => {
+    if (closed) return;
+    closed = true;
+    v.remove();
+    if (fromBack !== true) popOverlay(close);
+  };
+  const btn = h('button', { type: 'button', class: 'viewer-close', onclick: () => close() }, '✕');
+  const v = h('div', { class: 'viewer', onclick: (e) => { if (e.target === v || (!isVideo && !moved)) close(); } }, media, btn);
+  let moved = false, sx = 0, sy = 0;
+  v.addEventListener('pointerdown', (e) => { moved = false; sx = e.clientX; sy = e.clientY; });
+  v.addEventListener('pointermove', (e) => { if (Math.hypot(e.clientX - sx, e.clientY - sy) > 8) moved = true; });
+  swipeDownToClose(media, close, v);
   document.body.append(v);
+  pushOverlay(close);
 }

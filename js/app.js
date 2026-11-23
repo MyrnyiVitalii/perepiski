@@ -4,11 +4,12 @@ import { askPersistent } from './storage.js';
 import { loadSettings } from './settings.js';
 import { renderLibrary } from './library.js';
 import { openChat } from './chat.js';
-import { h } from './ui.js';
+import { h, clearOverlays } from './ui.js';
 import { t } from './i18n.js';
 
 const root = document.getElementById('app');
 let records = [];
+let openedFromList = false;
 
 // Встроенная история: папка с story.txt и assets.json (картинки рядом).
 // Демо лежит в папке demo, остальные истории — в stories/<папка>, список в stories/index.json
@@ -56,20 +57,25 @@ function showErrors(rec) {
 
 async function route() {
   // При переходе между экранами закрываем открытые шторки, меню и просмотр фото
-  document.querySelectorAll('.sheet-back, .menu-back, .viewer').forEach((el) => el.remove());
+  document.querySelectorAll('.sheet-back, .menu-back, .viewer, .tbc').forEach((el) => el.remove());
+  clearOverlays();
   const m = location.hash.match(/^#chat\/(.+)$/);
   if (m) {
     const rec = records.find((r) => r.id === decodeURIComponent(m[1]));
     if (rec) {
       if (rec.errors.length && !rec.isDemo) { showErrors(rec); return; }
       await openChat(root, rec, {
-        onExit: () => { location.hash = ''; },
-        onNext: (id) => { location.hash = '#chat/' + encodeURIComponent(id); },
+        // Назад в список: если пришли из списка — шаг назад по истории (тогда кнопка «Назад» телефона работает правильно)
+        onExit: () => {
+          if (openedFromList) { openedFromList = false; history.back(); } else location.replace('#');
+        },
+        onNext: (id) => { openedFromList = false; location.replace('#chat/' + encodeURIComponent(id)); },
       });
       return;
     }
   }
-  await renderLibrary(root, records, { onOpen: (rec) => { location.hash = '#chat/' + encodeURIComponent(rec.id); } });
+  openedFromList = false;
+  await renderLibrary(root, records, { onOpen: (rec) => { openedFromList = true; location.hash = '#chat/' + encodeURIComponent(rec.id); } });
 }
 
 async function start() {

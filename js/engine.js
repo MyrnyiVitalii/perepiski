@@ -3,6 +3,17 @@
 const MAX_SNAPSHOTS = 400;
 const clamp = (n) => Math.max(0, Math.min(10, n));
 
+// Короткий кусочек сообщения для цитат и закрепа
+export function snippet(it) {
+  if (!it) return '';
+  if (it.kind === 'photo') return '🖼 ' + (it.text || 'Фото');
+  if (it.kind === 'video') return '🎬 ' + (it.text || 'Видео');
+  if (it.kind === 'sticker') return 'Стикер';
+  if (it.kind === 'deleted') return 'Сообщение удалено';
+  const s = (it.text || '').replace(/\|\|/g, '').replace(/\*\*|__|~~/g, '').replace(/\s+/g, ' ');
+  return s.length > 60 ? s.slice(0, 57) + '…' : s;
+}
+
 export function nowTime() {
   const d = new Date();
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
@@ -63,7 +74,7 @@ export class Engine {
     this.snapshots.push({
       scene: s.scene, index: s.index, flags: { ...s.flags }, trust: { ...s.trust },
       time: s.time, nextTyping: s.nextTyping, logLen: s.log.length,
-      atChoice: s.atChoice, ended: s.ended, seq: s.seq, bg: s.bg || '',
+      atChoice: s.atChoice, ended: s.ended, seq: s.seq, bg: s.bg || '', pinned: s.pinned ?? null,
     });
     if (this.snapshots.length > MAX_SNAPSHOTS) this.snapshots.shift();
   }
@@ -73,7 +84,7 @@ export class Engine {
     Object.assign(s, {
       scene: snap.scene, index: snap.index, flags: { ...snap.flags }, trust: { ...snap.trust },
       time: snap.time, nextTyping: snap.nextTyping, atChoice: snap.atChoice, ended: snap.ended, seq: snap.seq,
-      bg: snap.bg || '',
+      bg: snap.bg || '', pinned: snap.pinned ?? null,
     });
     s.log.length = snap.logLen;
   }
@@ -127,6 +138,19 @@ export class Engine {
     ctx.toasts.push({ who, delta });
   }
 
+  // Последнее сообщение в ленте (от кого-то конкретного или вообще)
+  lastMsg(who, strict = false) {
+    const log = this.state.log;
+    const name = who && this.isMe(who) ? this.story.me : who;
+    for (let i = log.length - 1; i >= 0; i--) {
+      const it = log[i];
+      if (it.t !== 'msg') continue;
+      if (!name && !strict) return it;
+      if (it.who === name) return it;
+    }
+    return null;
+  }
+
   makeItem(fields) {
     this.state.seq += 1;
     return { id: this.state.seq, time: this.state.time || nowTime(), ...fields };
@@ -148,6 +172,20 @@ export class Engine {
         for (let i = s.log.length - 1; i >= 0; i--) if (s.log[i].t === 'msg') { target = s.log[i].id; break; }
         if (target == null) return 'next';
         return this.makeItem({ t: 'react', who: node.who, emoji: node.emoji, target });
+      }
+      case 'pin': {
+        const target = this.lastMsg(node.who);
+        if (!target) return 'next';
+        s.pinned = target.id;
+        const who = node.who || '';
+        return this.makeItem({ t: 'system', text: (who ? `📌 ${who} закрепил(а) «` : '📌 Закреплено «') + snippet(target) + '»' });
+      }
+      case 'unpin': s.pinned = null; return 'next';
+      case 'edit': {
+        // герой исправляет своё последнее сообщение — новый текст появляется отдельным тапом
+        const target = this.lastMsg(node.who, true);
+        if (!target) return 'next';
+        return this.makeItem({ t: 'edit', who: node.who, target: target.id, text: node.text });
       }
       case 'trust': this.applyTrust(node.who, node.delta, ctx); return 'next';
       case 'flag':
@@ -175,6 +213,12 @@ export class Engine {
           t: 'msg', who: me ? this.story.me : node.who, me,
           kind: node.kind, text: node.text, file: node.file, line: node.line,
         });
+        if (node.forwarded) item.forwarded = node.forwarded;
+        if (node.edited) item.edited = true;
+        if (node.replyTo) {
+          const r = this.lastMsg(node.replyTo === 'Я' ? this.story.me : node.replyTo);
+          if (r) item.reply = r.id;
+        }
         if (!me) {
           ctx.typing = s.nextTyping != null ? s.nextTyping : 1 + Math.random();
           ctx.typingWho = node.who;

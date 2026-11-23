@@ -262,6 +262,15 @@ function parseSceneLine(line, ln, err) {
         return { t: 'vibrate', pattern: ms > 0 ? [Math.min(ms, 3000)] : [400, 150, 400], line: ln };
       }
       case 'фон': return { t: 'bg', file: /^нет$/i.test(arg) ? '' : arg, line: ln };
+      // [закрепить] или [закрепить Аня] — закрепить последнее сообщение; [открепить]
+      case 'закрепить': return { t: 'pin', who: arg, line: ln };
+      case 'открепить': return { t: 'unpin', line: ln };
+      // [изменить Аня: новый текст] — Аня исправляет своё последнее сообщение
+      case 'изменить': {
+        const em = arg.match(/^([^:]+):\s*(.+)$/);
+        if (!em) { err(ln, 'Нужно «[изменить Имя: новый текст]»'); return null; }
+        return { t: 'edit', who: em[1].trim(), text: em[2], line: ln };
+      }
       case 'реакция': {
         // [реакция Аня 😱] — последний «кусок» строки это эмодзи, перед ним имя
         const rm = arg.match(/^(.+?)\s+(\S+)$/u);
@@ -280,6 +289,17 @@ function parseSceneLine(line, ln, err) {
     const who = line.slice(0, ci).trim();
     let body = line.slice(ci + 1).trim();
     const msg = { t: 'msg', who, kind: 'text', text: body, file: '', line: ln };
+    // Пометки в начале сообщения (можно несколько): [ответ Имя], [переслано Имя], [изменено]
+    for (;;) {
+      let pm = body.match(/^\[\s*ответ\s+([^\]]+?)\s*\]\s*/i);
+      if (pm) { msg.replyTo = pm[1]; body = body.slice(pm[0].length); continue; }
+      pm = body.match(/^\[\s*переслано(?:\s+от)?\s+([^\]]+?)\s*\]\s*/i);
+      if (pm) { msg.forwarded = pm[1]; body = body.slice(pm[0].length); continue; }
+      pm = body.match(/^\[\s*изменено\s*\]\s*/i);
+      if (pm) { msg.edited = true; body = body.slice(pm[0].length); continue; }
+      break;
+    }
+    msg.text = body;
     let bm = body.match(/^\[\s*фото\s+([^\]]+?)\s*\]\s*(.*)$/i);
     if (bm) { msg.kind = 'photo'; msg.file = bm[1]; msg.text = bm[2]; return msg; }
     bm = body.match(/^\[\s*видео\s+([^\]]+?)\s*\]\s*(.*)$/i);

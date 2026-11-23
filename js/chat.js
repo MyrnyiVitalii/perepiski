@@ -1,7 +1,7 @@
 // Экран чата: лента сообщений, тапы, «печатает…», выборы, меню, настройки чата.
-import { h, ICONS, iconBtn, avatar, flashMsg, sheet, viewer } from './ui.js';
+import { h, ICONS, iconBtn, avatar, flashMsg, sheet, viewer, pushOverlay, popOverlay } from './ui.js';
 import { t, plural } from './i18n.js';
-import { Engine } from './engine.js';
+import { Engine, snippet } from './engine.js';
 import { db } from './storage.js';
 import { settings, saveSettings, paintChatBg, themeSection, backgroundSection, togglesSection, soundSection, emo, hiddenBySettings } from './settings.js';
 import { pickImage, makeAvatar, saveAsset, assetUrl, removeAsset, LIMITS } from './images.js';
@@ -47,13 +47,23 @@ export async function openChat(root, rec, { onExit, onNext }) {
   const titleEl = h('div', { class: 'top-title' }, story.chatTitle);
   const subEl = h('div', { class: 'top-sub' });
   let headAva = headAvatar();
+  // Нажатие на аватарку или название чата — информация о чате (как в Telegram)
+  const titles = h('div', { class: 'top-titles', onclick: () => openChatInfo() }, titleEl, subEl);
   const top = h('header', { class: 'top' },
-    iconBtn('back', () => onExit()), headAva, h('div', { class: 'top-titles' }, titleEl, subEl),
+    iconBtn('back', () => onExit()), headAva, titles,
     iconBtn('people', openTrust, 'hide-rec'),
     iconBtn('dots', openMenu, 'hide-rec'),
   );
+  headAva.addEventListener('click', () => openChatInfo());
+  // Закреплённое сообщение под шапкой
+  const pinBar = h('div', { class: 'pin-bar' });
   const list = h('div', { class: 'feed-list' });
   const feed = h('div', { class: 'feed' }, list);
+  // Кнопка «вниз» с числом новых сообщений
+  const downCount = h('span', { class: 'down-count' });
+  const downBtn = h('button', { type: 'button', class: 'down-btn', onclick: () => { scrollDown(true); } },
+    h('span', { html: ICONS.down }), downCount);
+  const replyBar = h('div', { class: 'reply-bar' });
   const bottom = h('div', { class: 'bottom' });
   const toasts = h('div', { class: 'toasts' });
   const bgLayer = h('div', { class: 'chat-bg' });
@@ -62,7 +72,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
   const sceneB = h('div', { class: 'scene-bg' });
   const sceneShade = h('div', { class: 'scene-shade' });
   const chat = h('div', { class: 'chat' + (settings.recording ? ' rec' : '') },
-    bgLayer, h('div', { class: 'chat-shade' }), sceneA, sceneB, sceneShade, top, feed, bottom, toasts);
+    bgLayer, h('div', { class: 'chat-shade' }), sceneA, sceneB, sceneShade, top, pinBar, feed, downBtn, replyBar, bottom, toasts);
   root.replaceChildren(chat);
   paintChatBg(bgLayer);
 
@@ -96,9 +106,60 @@ export async function openChat(root, rec, { onExit, onNext }) {
   const rows = new Map();
 
   function metaEl(item, read) {
-    const m = h('span', { class: 'meta' }, h('span', { class: 'tm' }, item.time));
+    const m = h('span', { class: 'meta' },
+      isEdited(item) ? h('span', { class: 'edited' }, t('edited')) : null,
+      h('span', { class: 'tm' }, item.time));
     if (item.me) m.insertAdjacentHTML('beforeend', `<span class="tick">${read ? ICONS.tick2 : ICONS.tick1}</span>`);
     return m;
+  }
+
+  // Исправления сообщений ([изменить Аня: …]): берём самый свежий текст
+  function editOf(id) {
+    let last = null;
+    for (const it of engine.state.log) if (it.t === 'edit' && it.target === id) last = it;
+    return last;
+  }
+  const isEdited = (item) => item.edited || !!editOf(item.id);
+  const textOf = (item) => { const e = editOf(item.id); return e ? e.text : item.text; };
+
+  // Оформление текста как в Telegram: **жирный**, __курсив__, ~~зачёркнутый~~, ||спойлер||
+  function rich(str) {
+    const frag = document.createDocumentFragment();
+    const re = /(\*\*([^*]+)\*\*|__([^_]+)__|~~([^~]+)~~|\|\|([^|]+)\|\|)/g;
+    let last = 0, m;
+    str = emo(str || '');
+    while ((m = re.exec(str))) {
+      if (m.index > last) frag.append(str.slice(last, m.index));
+      if (m[2]) frag.append(h('b', {}, m[2]));
+      else if (m[3]) frag.append(h('i', {}, m[3]));
+      else if (m[4]) frag.append(h('s', {}, m[4]));
+      else if (m[5]) {
+        const sp = h('span', { class: 'spoiler' }, m[5]);
+        sp.addEventListener('click', (e) => { e.stopPropagation(); sp.classList.add('open'); play('реакция', { auto: true }); });
+        frag.append(sp);
+      }
+      last = m.index + m[0].length;
+    }
+    if (last < str.length) frag.append(str.slice(last));
+    return frag;
+  }
+
+  // Цитата сверху сообщения (ответ на сообщение), нажатие — прокрутить к нему
+  function quoteEl(id) {
+    const it = engine.state.log.find((x) => x.id === id);
+    if (!it) return null;
+    const c = char(it.who);
+    return h('div', { class: 'quote', style: { borderColor: c.color }, onclick: (e) => { e.stopPropagation(); jumpTo(id); } },
+      h('div', { class: 'q-name', style: { color: c.color } }, it.who),
+      h('div', { class: 'q-text' }, emo(snippet({ ...it, text: textOf(it) }))));
+  }
+
+  function jumpTo(id) {
+    const row = rows.get(id);
+    if (!row) return;
+    stick = false;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
   }
 
   function imgEl(file) {
@@ -125,7 +186,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
       item = { ...item, kind: 'text' };
     }
     if (item.t === 'date' || item.t === 'system') {
-      return h('div', { class: 'sys' + (animate ? ' new' : '') }, emo(item.text));
+      return h('div', { class: 'sys' + (animate ? ' new' : '') }, rich(item.text));
     }
     if (item.t === 'end') {
       const isEpisode = !!story.series;
@@ -147,19 +208,24 @@ export async function openChat(root, rec, { onExit, onNext }) {
 
     const c = char(item.who);
     const nameEl = (!item.me && story.isGroup && runStart) ? h('div', { class: 'name', style: { color: c.color } }, item.who) : null;
+    // «Переслано от …» и цитата ответа — над текстом, как в Telegram
+    const fwdEl = item.forwarded ? h('div', { class: 'fwd' }, t('forwardedFrom'), h('b', {}, item.forwarded)) : null;
+    const replyId = item.reply ?? engine.state.myReply?.[item.id];
+    const qEl = replyId ? quoteEl(replyId) : null;
+    const text = textOf(item);
 
     if (item.kind === 'sticker') {
       row.append(h('div', { class: 'sticker' }, nameEl, imgEl(item.file), metaEl(item, read)));
     } else if (item.kind === 'photo' || item.kind === 'video') {
       const media = item.kind === 'photo' ? imgEl(item.file) : videoEl(item.file);
-      const b = h('div', { class: 'bubble photo' + (item.text ? '' : ' no-caption') }, nameEl, media);
-      if (item.text) b.append(h('div', { class: 'caption text' }, emo(item.text), metaEl(item, read)));
+      const b = h('div', { class: 'bubble photo' + (text ? '' : ' no-caption') }, nameEl, fwdEl, qEl, media);
+      if (text) b.append(h('div', { class: 'caption text' }, rich(text), metaEl(item, read)));
       else b.append(metaEl(item, read));
       row.append(b);
     } else if (item.kind === 'deleted') {
       row.append(h('div', { class: 'bubble' }, nameEl, h('div', { class: 'text deleted' }, emo('🚫 ' + t('deleted')), metaEl(item, read))));
     } else {
-      row.append(h('div', { class: 'bubble' }, nameEl, h('div', { class: 'text' }, emo(item.text), metaEl(item, read))));
+      row.append(h('div', { class: 'bubble' }, nameEl, fwdEl, qEl, h('div', { class: 'text' }, rich(text), metaEl(item, read))));
     }
     const holder = row.querySelector('.bubble, .sticker');
     holder.dataset.id = item.id;
@@ -214,15 +280,25 @@ export async function openChat(root, rec, { onExit, onNext }) {
     const item = engine.state.log.find((x) => x.id === id);
     const bar = h('div', { class: 'react-bar' },
       ...REACTIONS.map((e) => h('button', { type: 'button', class: 'rb-emoji', onclick: () => { close(); setMyReaction(id, e); } }, e)));
+    const pinnedNow = currentPin() === id;
+    const act = (icon, label, fn) => h('button', { type: 'button', onclick: () => { close(); fn(); } }, h('span', { html: ICONS[icon] }), label);
     const actions = h('div', { class: 'react-actions' },
-      item && item.text ? h('button', { type: 'button', onclick: () => {
-        close();
-        navigator.clipboard?.writeText(item.text).then(() => flashMsg(t('copied'))).catch(() => {});
-      } }, t('reactCopy')) : null);
+      item && !item.me ? act('reply', t('replyAction'), () => setReply(id)) : null,
+      act('pin', pinnedNow ? t('unpinAction') : t('pinAction'), () => togglePin(id)),
+      item && item.text ? act('copy', t('reactCopy'), () => {
+        navigator.clipboard?.writeText(textOf(item).replace(/\*\*|__|~~|\|\|/g, '')).then(() => flashMsg(t('copied'))).catch(() => {});
+      }) : null);
     const pop = h('div', { class: 'react-pop' }, bar, actions);
     const back = h('div', { class: 'menu-back react-back', onclick: (e) => { if (e.target === back) close(); } }, pop);
-    function close() { back.remove(); holder.classList.remove('lifted'); }
+    let closed = false;
+    function close(fromBack) {
+      if (closed) return;
+      closed = true;
+      back.remove(); holder.classList.remove('lifted');
+      if (fromBack !== true) popOverlay(close);
+    }
     document.body.append(back);
+    pushOverlay(close);
     holder.classList.add('lifted');
     const top_ = Math.max(70, r.top - 62);
     pop.style.top = top_ + 'px';
@@ -231,35 +307,178 @@ export async function openChat(root, rec, { onExit, onNext }) {
     vibrate([15]);
   }
 
-  // Долгое нажатие и двойной тап по сообщению
-  function attachBubbleGestures() {
-    let lp = null, lastTap = { id: null, t: 0 };
-    feed.addEventListener('pointerdown', (e) => {
+  // ---------- Жесты, как в Telegram ----------
+  // Долгое нажатие — реакции и меню; двойной тап — ❤️;
+  // свайп сообщения влево — ответить на него; свайп всего чата вправо — назад к списку историй.
+  function attachGestures() {
+    let g = null, lastTap = { id: null, t: 0 };
+    const W = () => chat.clientWidth;
+    chat.addEventListener('pointerdown', (e) => {
+      if (!e.isPrimary || e.button > 0) return;
+      if (e.target.closest('.sheet-back, .menu-back, .choices button, .start-zone, input')) return;
       const holder = e.target.closest('.bubble[data-id], .sticker[data-id]');
-      if (!holder || !e.isPrimary) return;
-      const x = e.clientX, y = e.clientY;
-      lp = { holder, x, y, timer: setTimeout(() => { lp = null; openReactPicker(holder); }, LONG_PRESS) };
+      g = { x: e.clientX, y: e.clientY, t: performance.now(), holder, mode: null, dx: 0 };
+      if (holder) g.timer = setTimeout(() => { if (g && !g.mode) { const h_ = g.holder; g = null; openReactPicker(h_); } }, LONG_PRESS);
     });
-    const cancel = () => { if (lp) { clearTimeout(lp.timer); lp = null; } };
-    feed.addEventListener('pointermove', (e) => { if (lp && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) > TAP_MAX_MOVE) cancel(); });
-    feed.addEventListener('pointercancel', cancel);
-    feed.addEventListener('scroll', cancel, { passive: true });
-    feed.addEventListener('pointerup', (e) => {
-      if (!lp) return;
-      cancel();
-      const holder = e.target.closest('.bubble[data-id], .sticker[data-id]');
-      if (!holder || e.target.closest('img, video, .video-box')) return;
-      const id = +holder.dataset.id, now = performance.now();
-      if (lastTap.id === id && now - lastTap.t < 320) { lastTap = { id: null, t: 0 }; setMyReaction(id, '❤️'); }
-      else lastTap = { id, t: now };
+    chat.addEventListener('pointermove', (e) => {
+      if (!g) return;
+      const dx = e.clientX - g.x, dy = e.clientY - g.y;
+      if (!g.mode) {
+        if (Math.hypot(dx, dy) < TAP_MAX_MOVE) return;
+        clearTimeout(g.timer);
+        if (Math.abs(dx) > Math.abs(dy) * 1.4) {
+          if (dx > 0 && !chat.classList.contains('rec-lock')) g.mode = 'back';
+          else if (dx < 0 && g.holder && !engine.state.ended && g.holder.closest('.row.in')) g.mode = 'reply';
+          else g.mode = 'none';
+        } else g.mode = 'none';
+      }
+      g.dx = dx;
+      if (g.mode === 'back') {
+        chat.style.transition = 'none';
+        chat.style.transform = `translateX(${Math.max(0, dx)}px)`;
+      } else if (g.mode === 'reply') {
+        const d = Math.max(-80, Math.min(0, dx));
+        const row = g.holder.closest('.row');
+        row.style.transition = 'none';
+        row.style.transform = `translateX(${d}px)`;
+        row.classList.toggle('reply-ready', d < -55);
+      }
+    });
+    const end = (e) => {
+      if (!g) return;
+      clearTimeout(g.timer);
+      const { mode, dx, holder } = g;
+      const quick = performance.now() - g.t < 250;
+      if (mode === 'back') {
+        chat.style.transition = 'transform .22s ease-out';
+        if (dx > W() * 0.33 || (quick && dx > 60)) {
+          chat.style.transform = `translateX(${W()}px)`;
+          setTimeout(() => onExit(), 200);
+        } else chat.style.transform = '';
+      } else if (mode === 'reply') {
+        const row = holder.closest('.row');
+        row.style.transition = 'transform .2s';
+        row.style.transform = '';
+        row.classList.remove('reply-ready');
+        if (dx < -55) setReply(+holder.dataset.id);
+      } else if (!mode && holder && e && e.type === 'pointerup' && !e.target.closest('img, video, .video-box, .spoiler, .quote')) {
+        // двойной тап по сообщению — ❤️
+        const id = +holder.dataset.id, now = performance.now();
+        if (lastTap.id === id && now - lastTap.t < 320) { lastTap = { id: null, t: 0 }; setMyReaction(id, '❤️'); }
+        else lastTap = { id, t: now };
+      }
+      g = null;
+    };
+    chat.addEventListener('pointerup', end);
+    chat.addEventListener('pointercancel', (e) => {
+      // браузер забрал жест себе (началась прокрутка) — возвращаем всё на место
+      if (g && g.mode === 'back') { chat.style.transition = 'transform .2s'; chat.style.transform = ''; }
+      if (g && g.mode === 'reply') { const r = g.holder.closest('.row'); r.style.transform = ''; r.classList.remove('reply-ready'); }
+      if (g) clearTimeout(g.timer);
+      g = null;
     });
     feed.addEventListener('contextmenu', (e) => { if (e.target.closest('.bubble, .sticker')) e.preventDefault(); });
   }
 
+  // ---------- Ответ на сообщение (свайп влево или «Ответить» в меню) ----------
+  let replyTo = null;
+  function setReply(id) {
+    const it = engine.state.log.find((x) => x.id === id);
+    if (!it) return;
+    replyTo = id;
+    vibrate([12]);
+    drawReplyBar();
+  }
+  function drawReplyBar() {
+    const it = replyTo && engine.state.log.find((x) => x.id === replyTo);
+    if (!it) { replyTo = null; replyBar.replaceChildren(); replyBar.classList.remove('on'); return; }
+    const c = char(it.who);
+    replyBar.replaceChildren(
+      h('span', { class: 'rb-icon', html: ICONS.reply }),
+      h('div', { class: 'rb-body', style: { borderColor: c.color } },
+        h('div', { class: 'q-name', style: { color: c.color } }, t('replyTo', { name: it.who })),
+        h('div', { class: 'q-text' }, emo(snippet({ ...it, text: textOf(it) })))),
+      h('button', { type: 'button', class: 'rb-close', onclick: () => { replyTo = null; drawReplyBar(); } }, '✕'));
+    replyBar.classList.add('on');
+  }
+
+  // ---------- Закреплённое сообщение ----------
+  // Закреп из истории ([закрепить]) или свой (долгое нажатие → «Закрепить»)
+  function currentPin() {
+    const s = engine.state;
+    if (s.myPin === 0) return null; // своё «открепить»
+    return s.myPin ?? s.pinned ?? null;
+  }
+  function togglePin(id) {
+    engine.state.myPin = currentPin() === id ? 0 : id;
+    save();
+    drawPinBar();
+    flashMsg(engine.state.myPin ? t('pinned') : t('unpinned'));
+  }
+  function drawPinBar() {
+    const id = currentPin();
+    const it = id && engine.state.log.find((x) => x.id === id);
+    if (!it) { pinBar.replaceChildren(); pinBar.classList.remove('on'); return; }
+    pinBar.replaceChildren(
+      h('div', { class: 'pb-line' }),
+      h('div', { class: 'pb-body', onclick: () => jumpTo(id) },
+        h('div', { class: 'pb-title' }, t('pinnedTitle')),
+        h('div', { class: 'pb-text' }, emo(snippet({ ...it, text: textOf(it) })))),
+      h('span', { class: 'pb-icon', html: ICONS.pin }));
+    pinBar.classList.add('on');
+  }
+
+  // ---------- Кнопка «вниз» ----------
+  let unseen = 0;
+  function updateDownBtn() {
+    const far = feed.scrollHeight - feed.scrollTop - feed.clientHeight > 250;
+    if (!far) unseen = 0;
+    downBtn.classList.toggle('on', far);
+    downCount.textContent = unseen ? String(unseen) : '';
+    downCount.classList.toggle('on', unseen > 0);
+  }
+  feed.addEventListener('scroll', updateDownBtn, { passive: true });
+
+  // ---------- Информация о чате (нажатие на шапку) ----------
+  function openChatInfo() {
+    if (!story.isGroup) { openProfile(story.others[0]); return; }
+    const big = avatar(chatAvaUrl(), story.chatTitle, '#5c6bc0');
+    const box = h('div', { class: 'profile' },
+      big,
+      h('div', { class: 'p-name' }, emo(story.chatTitle)),
+      h('div', { class: 'p-sub' }, plural('members', story.charOrder.length)),
+      story.description ? h('div', { class: 'p-section' }, h('div', { class: 'p-label' }, t('chatAbout')), emo(story.description)) : null,
+      h('div', { class: 'p-section members' }, h('div', { class: 'p-label' }, t('membersTitle')),
+        ...story.charOrder.map((name) => {
+          const c = char(name);
+          return h('button', { type: 'button', class: 'member', onclick: () => { s.close(); openProfile(name); } },
+            avaOf(name),
+            h('div', { class: 'm-body' },
+              h('div', { class: 'm-name', style: { color: c.color } }, name + (name === story.me ? ` (${t('you')})` : '')),
+              h('div', { class: 'm-about' }, emo(c.about || ''))));
+        })),
+    );
+    big.addEventListener('click', () => { const u = chatAvaUrl(); if (u) viewer(u); });
+    const s = sheet(box);
+  }
+
   // ---------- Конец серии: «Продолжение следует…» ----------
+  // Чёрный экран не исчезает сам: надпись «дышит», а закрывается только нажатием
   function showToBeContinued() {
-    const ov = h('div', { class: 'tbc', onclick: () => ov.remove() }, h('div', { class: 'tbc-text' }, t('toBeContinued')));
+    const text = h('div', { class: 'tbc-text' }, t('toBeContinuedWord'), h('span', { class: 'tbc-dots' }, h('i', {}, '.'), h('i', {}, '.'), h('i', {}, '.')));
+    const ov = h('div', { class: 'tbc' }, text);
+    const shownAt = performance.now();
+    let closed = false;
+    const close = (fromBack) => {
+      if (closed) return;
+      closed = true;
+      ov.remove();
+      if (fromBack !== true) popOverlay(close);
+    };
+    // случайное касание в первую секунду не закрывает
+    ov.addEventListener('click', () => { if (performance.now() - shownAt > 1000) close(); });
     document.body.append(ov);
+    pushOverlay(close);
     play('финал');
   }
 
@@ -293,9 +512,11 @@ export async function openChat(root, rec, { onExit, onNext }) {
     log.forEach((it, i) => { const el = renderItem(it, log[i - 1], log[i + 1], read.has(it.id), false); if (el) list.append(el); });
     applySceneBg(true);
     if (engine.state.ended !== null) saveCarry();
+    drawPinBar();
+    drawReplyBar();
     renderBottom();
     setSub(idleSub());
-    requestAnimationFrame(() => scrollDown(false));
+    requestAnimationFrame(() => { scrollDown(false); updateDownBtn(); });
   }
 
   function refreshHeader() {
@@ -305,12 +526,30 @@ export async function openChat(root, rec, { onExit, onNext }) {
   }
 
   // То, что рисуется отдельной строкой в ленте (реакции рисуются на сообщениях)
-  const rowItems = () => engine.state.log.filter((it) => it.t !== 'react' && !hiddenBySettings(it));
+  const rowItems = () => engine.state.log.filter((it) => it.t !== 'react' && it.t !== 'edit' && !hiddenBySettings(it));
+
+  // Перерисовать одно сообщение на месте (после исправления текста)
+  function redrawRow(id, flash) {
+    const old = rows.get(id);
+    if (!old) return;
+    const log = rowItems();
+    const i = log.findIndex((x) => x.id === id);
+    if (i < 0) return;
+    const read = computeRead(log);
+    const el = renderItem(log[i], log[i - 1], log[i + 1], read.has(id), false);
+    old.replaceWith(el);
+    if (flash) { el.classList.add('flash'); }
+  }
 
   function appendItem(item) {
     if (hiddenBySettings(item)) return;
     if (item.t === 'react') {
       drawReacts(item.target, true);
+      play('реакция', { auto: true });
+      return;
+    }
+    if (item.t === 'edit') {
+      redrawRow(item.target, true);
       play('реакция', { auto: true });
       return;
     }
@@ -331,6 +570,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     if (el) list.append(el);
     if (item.t === 'msg') play(item.me ? 'отправка' : 'уведомление', { auto: true });
     if (item.t === 'end') { saveCarry(); play('финал'); }
+    if (item.t === 'system') drawPinBar();
     scrollDown(true);
   }
 
@@ -505,6 +745,10 @@ export async function openChat(root, rec, { onExit, onNext }) {
     if (typing || busy) return;
     const ctx = engine.choose(i);
     if (!ctx) return;
+    // если перед этим смахнули сообщение — мой ответ будет с цитатой
+    if (ctx.item && replyTo) ctx.item.reply = replyTo;
+    replyTo = null;
+    drawReplyBar();
     save();
     renderBottom();
     if (ctx.item) appendItem(ctx.item);
@@ -540,12 +784,14 @@ export async function openChat(root, rec, { onExit, onNext }) {
   }
   attachTap(feed);
   attachTap(bottom);
-  attachBubbleGestures();
+  attachGestures();
   top.addEventListener('pointerdown', unlockAudio);
 
   // ---------- Меню ----------
   function openMenu() {
-    const item = (icon, label, fn) => h('button', { type: 'button', onclick: () => { back.remove(); fn(); } },
+    let closed = false;
+    const close = (fromBack) => { if (closed) return; closed = true; back.remove(); if (fromBack !== true) popOverlay(close); };
+    const item = (icon, label, fn) => h('button', { type: 'button', onclick: () => { close(); fn(); } },
       h('span', { html: ICONS[icon] }), label);
     const menu = h('div', { class: 'menu' },
       item(settings.sound ? 'volume' : 'mute', settings.sound ? t('soundIsOn') : t('soundIsOff'), () => {
@@ -559,8 +805,9 @@ export async function openChat(root, rec, { onExit, onNext }) {
       item('undo', t('menuBackOne'), backOne),
       item('undoChoice', t('menuBackChoice'), backChoice),
     );
-    const back = h('div', { class: 'menu-back', onclick: (e) => { if (e.target === back) back.remove(); } }, menu);
+    const back = h('div', { class: 'menu-back', onclick: (e) => { if (e.target === back) close(); } }, menu);
     document.body.append(back);
+    pushOverlay(close);
   }
 
   function restart() {
