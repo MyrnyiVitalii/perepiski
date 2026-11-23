@@ -1,0 +1,3 @@
+PowerGlitch 2.5.0 — библиотека эффекта «глитч» (помехи).
+Автор: Benjamin Raymond, https://github.com/7PH/powerglitch
+Лицензия: MIT (файл LICENSE рядом). Файл не изменён: powerglitch.esm.js = lib/index.esm.js из npm-пакета powerglitch@2.5.0.

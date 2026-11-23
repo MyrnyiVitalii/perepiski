@@ -479,3 +479,16 @@ body.no-avatars .row .ava { display: none; }
   background: rgba(0, 0, 0, .55); color: #fff; font-size: 13.5px; white-space: nowrap; pointer-events: none; transition: opacity .4s; }
 .photo-spoiler.open img { filter: none; transform: none; }
 .photo-spoiler.open .ps-noise, .photo-spoiler.open .ps-label { opacity: 0; }
+
+/* ===== «Помехи» (PowerGlitch + шум + развёртка) ===== */
+.glitch-host { position: absolute; inset: 0; z-index: 30; pointer-events: none; overflow: hidden; background: #000; }
+.glitch-host > div, .glitch-host > div > div { width: 100%; height: 100%; }
+.glitch-host .chat { height: 100%; }
+.glitch-noise { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; mix-blend-mode: overlay;
+  opacity: .35; animation: glitch-noise-op 1.1s steps(1) both; }
+@keyframes glitch-noise-op { 0% { opacity: .5; } 20% { opacity: .2; } 35% { opacity: .55; } 55% { opacity: .25; } 75% { opacity: .45; } 100% { opacity: .1; } }
+.glitch-scan { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .28) 0 1px, transparent 1px 3px);
+  animation: glitch-roll 1.1s linear both; }
+@keyframes glitch-roll { from { background-position: 0 0; } to { background-position: 0 120px; } }
+.glitch-drop { position: absolute; inset: 0; background: #000; opacity: 0; animation: glitch-drop 1.1s steps(1) both; }
+@keyframes glitch-drop { 0%, 100% { opacity: 0; } 46% { opacity: .85; } 50% { opacity: 0; } 71% { opacity: .6; } 73% { opacity: 0; } }
