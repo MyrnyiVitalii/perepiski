@@ -39,3 +39,5 @@ bus.mp3             [звук автобус] – «bus interior by freesound_co
 wind.mp3            [звук ветер] – «Cemetery Wind by DRAGON-STUDIO» – https://pixabay.com/sound-effects/cemetery-wind-467488/
 switch.mp3          [звук выключатель] – «Light Switch by freesound_community» – https://pixabay.com/sound-effects/film-special-effects-light-switch-81967/
 dishes.mp3          [звук посуда] – «School Cafeteria Ambience by freesound_community» – https://pixabay.com/sound-effects/people-school-cafeteria-ambience-55474/
+
+bell.mp3 (24.11.2026): один удар целиком, обрезан перед вторым ударом (5,5 с), чтобы колокол затихал сам, без обрыва.
