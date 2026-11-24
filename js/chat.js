@@ -871,6 +871,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     save();
     renderBottom();
     (ctx.items && ctx.items.length ? ctx.items : [ctx.item]).filter(Boolean).forEach((it) => appendItem(it));
+    ctx.sounds.forEach((n) => play(n));
     ctx.vibro.forEach((p) => vibrate(p));
     runEffects(ctx.effects);
     showToasts(ctx.toasts);

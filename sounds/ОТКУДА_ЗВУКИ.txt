@@ -18,3 +18,24 @@ drone.mp3       [звук гул] – «Deep Haunting Drone by DRAGON-STUDIO» �
 hit.mp3         [звук удар] – «Horror Impact Hit by Universfield» – https://pixabay.com/sound-effects/horror-horror-impact-hit-567238/
 final.mp3       [звук финал] – «Creepy Outro Sound Effect by freesound_community» – https://pixabay.com/sound-effects/horror-creepy-outro-sound-effect-82367/
 bell.mp3        [звук колокол] – «Creepy church bell by freesound_community» – https://pixabay.com/sound-effects/city-creepy-church-bell-33827/
+
+Варианты под сцену и новые звуки (раунд 2, 24.11.2026):
+steps-quiet.mp3     [звук шаги-тихо] – «Sneaking on wooden floor by freesound_community» – https://pixabay.com/sound-effects/household-sneaking-on-wooden-floor-20306/
+steps-street.mp3    [звук шаги-улица] – «Footsteps Dirt Gravel by freesound_community» – https://pixabay.com/sound-effects/film-special-effects-footsteps-dirt-gravel-6823/
+steps-slow.mp3      [звук шаги-медленно] – «footsteps stairs slow by freesound_community» – https://pixabay.com/sound-effects/household-footsteps-stairs-slow-106711/
+heart-fast.mp3      [звук сердце-быстро] – «Rapid Heartbeat by Universfield» – https://pixabay.com/sound-effects/film-special-effects-rapid-heartbeat-151928/
+heart-slow.mp3      [звук сердце-медленно] – «Heartbeat (tense) by PWLPL» – https://pixabay.com/sound-effects/film-special-effects-heartbeat-tense-377250/
+knock-window.mp3    [звук стук-окно] – «tapping on glass by freesound_community» – https://pixabay.com/sound-effects/household-tapping-on-glass-31920/
+knock-slow.mp3      [звук стук-медленно] – «Door Bang Echo by TanwerAman» – https://pixabay.com/sound-effects/household-door-bang-echo-505135/
+creak-floor.mp3     [звук скрип-пол] – «creaking floor OWI by freesound_community» – https://pixabay.com/sound-effects/film-special-effects-creaking-floor-owi-83462/
+creak-window.mp3    [звук скрип-окно] – «opening window by freesound_community» – https://pixabay.com/sound-effects/film-special-effects-opening-window-107097/
+creak-branches.mp3  [звук скрип-ветки] – «Branch Drag by TanwerAman» – https://pixabay.com/sound-effects/nature-branch-drag-329004/
+crash.mp3           [звук удар-авария] – «Car Crash Sound Effect by DRAGON-STUDIO» – https://pixabay.com/sound-effects/film-special-effects-car-crash-sound-effect-376874/
+horn.mp3            [звук гудок] – «Truck Horn by Universfield» – https://pixabay.com/sound-effects/city-truck-horn-153263/
+camera.mp3          [звук камера] – «Camera Shutter by Universfield» – https://pixabay.com/sound-effects/film-special-effects-camera-shutter-199580/
+laugh.mp3           [звук смех] – «Girl Laugh by freesound_community» – https://pixabay.com/sound-effects/people-girl-laugh-6689/
+whisper.mp3         [звук шёпот] – «Ghost Whisper by DRAGON-STUDIO» – https://pixabay.com/sound-effects/horror-ghost-whisper-351569/
+bus.mp3             [звук автобус] – «bus interior by freesound_community» – https://pixabay.com/sound-effects/city-bus-interior-22321/
+wind.mp3            [звук ветер] – «Cemetery Wind by DRAGON-STUDIO» – https://pixabay.com/sound-effects/cemetery-wind-467488/
+switch.mp3          [звук выключатель] – «Light Switch by freesound_community» – https://pixabay.com/sound-effects/film-special-effects-light-switch-81967/
+dishes.mp3          [звук посуда] – «School Cafeteria Ambience by freesound_community» – https://pixabay.com/sound-effects/people-school-cafeteria-ambience-55474/

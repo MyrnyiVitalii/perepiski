@@ -181,6 +181,26 @@ const FILE_SOUNDS = {
   'удар': 'sounds/hit.mp3',
   'финал': 'sounds/final.mp3',
   'колокол': 'sounds/bell.mp3',
+  // варианты под сцену и новые звуки (выбор Виталика 24.11.2026, раунд 2)
+  'шаги-тихо': 'sounds/steps-quiet.mp3',
+  'шаги-улица': 'sounds/steps-street.mp3',
+  'шаги-медленно': 'sounds/steps-slow.mp3',
+  'сердце-быстро': 'sounds/heart-fast.mp3',
+  'сердце-медленно': 'sounds/heart-slow.mp3',
+  'стук-окно': 'sounds/knock-window.mp3',
+  'стук-медленно': 'sounds/knock-slow.mp3',
+  'скрип-пол': 'sounds/creak-floor.mp3',
+  'скрип-окно': 'sounds/creak-window.mp3',
+  'скрип-ветки': 'sounds/creak-branches.mp3',
+  'удар-авария': 'sounds/crash.mp3',
+  'гудок': 'sounds/horn.mp3',
+  'камера': 'sounds/camera.mp3',
+  'смех': 'sounds/laugh.mp3',
+  'шёпот': 'sounds/whisper.mp3',
+  'автобус': 'sounds/bus.mp3',
+  'ветер': 'sounds/wind.mp3',
+  'выключатель': 'sounds/switch.mp3',
+  'посуда': 'sounds/dishes.mp3',
 };
 const fileBuffers = new Map();
 async function fileBuffer(name) {

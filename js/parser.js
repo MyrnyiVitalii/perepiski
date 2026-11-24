@@ -121,7 +121,7 @@ export function parseStory(text) {
     }
 
     // Уточнения к кнопке
-    const dm = line.match(/^(текст|доверие|запомнить|пояснение)\s*:\s*(.*)$/i);
+    const dm = line.match(/^(текст|доверие|запомнить|пояснение|звук)\s*:\s*(.*)$/i);
     const lastNode = scene.items[scene.items.length - 1];
     if (dm && lastNode && lastNode.t === 'choice') {
       const opt = lastNode.options[lastNode.options.length - 1];
@@ -145,6 +145,9 @@ export function parseStory(text) {
         }
       } else if (k === 'запомнить') {
         v.split(',').map((s) => s.trim()).filter(Boolean).forEach((f) => opt.flags.push(f));
+      } else if (k === 'звук') {
+        // звук в момент, когда Ира отправляет сообщения этой кнопки (щелчок камеры, стук в ответ)
+        opt.sounds = (opt.sounds || []).concat(v.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean));
       }
       continue;
     }

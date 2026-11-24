@@ -26,6 +26,7 @@ const SHELL = [
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
   'sounds/notify.mp3', 'sounds/send.mp3', 'sounds/push.mp3', 'sounds/typing.mp3', 'sounds/reaction.mp3', 'sounds/vibration.mp3', 'sounds/heart.mp3',
   'sounds/knock.mp3', 'sounds/creak.mp3', 'sounds/steps.mp3', 'sounds/static.mp3', 'sounds/drone.mp3', 'sounds/hit.mp3', 'sounds/final.mp3', 'sounds/bell.mp3',
+  'sounds/steps-quiet.mp3', 'sounds/steps-street.mp3', 'sounds/steps-slow.mp3', 'sounds/heart-fast.mp3', 'sounds/heart-slow.mp3', 'sounds/knock-window.mp3', 'sounds/knock-slow.mp3', 'sounds/creak-floor.mp3', 'sounds/creak-window.mp3', 'sounds/creak-branches.mp3', 'sounds/crash.mp3', 'sounds/horn.mp3', 'sounds/camera.mp3', 'sounds/laugh.mp3', 'sounds/whisper.mp3', 'sounds/bus.mp3', 'sounds/wind.mp3', 'sounds/switch.mp3', 'sounds/dishes.mp3',
 ];
 
 const isText = (url) => url.pathname.endsWith('/') || /\.(html|js|mjs|css|json|txt)$/i.test(url.pathname);

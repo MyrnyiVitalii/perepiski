@@ -284,7 +284,7 @@ export class Engine {
     if (!node) return null;
     const opt = node.options[i];
     this.pushSnap();
-    const ctx = { effects: [], sounds: [], toasts: [], vibro: [], item: null, bgChanged: false };
+    const ctx = { effects: [], sounds: [...(opt.sounds || [])], toasts: [], vibro: [], item: null, bgChanged: false };
     ctx.items = [];
     if (opt.msgs && opt.msgs.length && !(typed && typed.trim())) {
       // несколько строк «текст:» – несколько сообщений подряд (и фото, и спойлеры)
