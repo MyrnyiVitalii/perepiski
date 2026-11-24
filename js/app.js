@@ -7,6 +7,7 @@ import { openChat } from './chat.js';
 import { openNotes } from './notes.js';
 import { h, clearOverlays } from './ui.js';
 import { t } from './i18n.js';
+import { startUpdateBar } from './updates.js';
 
 const root = document.getElementById('app');
 let records = [];
@@ -133,6 +134,7 @@ async function start() {
   linkSeries(records);
   window.addEventListener('hashchange', route);
   await route();
+  try { startUpdateBar(); } catch (e) { console.warn(e); }
   try { startOffline(); } catch (e) { console.warn(e); }
 }
 

@@ -20,7 +20,7 @@ const netLooksBad = () => (self.navigator && self.navigator.onLine === false) ||
 const SHELL = [
   './', 'index.html', 'manifest.json', 'css/app.css',
   'js/app.js', 'js/chat.js', 'js/engine.js', 'js/fx.js', 'js/i18n.js', 'js/images.js', 'js/intro.js', 'js/library.js', 'js/notes.js',
-  'js/parser.js', 'js/settings.js', 'js/sounds.js', 'js/storage.js', 'js/themes.js', 'js/ui.js',
+  'js/parser.js', 'js/settings.js', 'js/sounds.js', 'js/storage.js', 'js/themes.js', 'js/ui.js', 'js/updates.js',
   'lang/ru.js', 'vendor/powerglitch/powerglitch.esm.js',
   'fonts/playfair-cyrillic.woff2', 'fonts/playfair-latin.woff2', 'fonts/oswald-cyrillic.woff2', 'fonts/oswald-latin.woff2',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
@@ -34,8 +34,16 @@ const isText = (url) => url.pathname.endsWith('/') || /\.(html|js|mjs|css|json|t
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
     const cache = await caches.open(CACHE);
-    await cache.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })));
-    try { await syncStories([]); } catch (err) { /* докачаем при следующем запуске */ }
+    // по одному файлу, чтобы полоска загрузки в приложении показывала «N из M»
+    let done = 0;
+    report('shell', 0, SHELL.length);
+    for (const u of SHELL) {
+      const r = await fetch(new Request(u, { cache: 'reload' }));
+      if (!r.ok) throw new Error('Не скачался ' + u);
+      await cache.put(u, r);
+      report('shell', ++done, SHELL.length);
+    }
+    try { await syncStories([]); } catch (err) { report('done', 0, 0, true); }
     self.skipWaiting();
   })());
 });
@@ -131,6 +139,13 @@ async function cacheFirst(e, req) {
 
 // Докачать всё для историй: stories/index.json → каждая папка → story.txt, assets.json и все картинки из assets.json.
 // Уже сохранённые картинки не качаем заново (их обновляет cacheFirst, когда они видны). skip – удалённые истории.
+// Сообщить открытому приложению, сколько уже загружено (полоска внизу списка историй)
+async function report(stage, done, total, offline = false) {
+  try {
+    for (const c of await self.clients.matchAll({ includeUncontrolled: true, type: 'window' })) c.postMessage({ type: 'progress', stage, done, total, offline });
+  } catch (err) { /* нет окон */ }
+}
+
 async function syncStories(skip) {
   const cache = await caches.open(CACHE);
   const base = self.registration.scope;
@@ -142,9 +157,12 @@ async function syncStories(skip) {
       await cache.put(new URL('stories/index.json', base).href, res.clone());
       for (const s of await res.json()) if (!skipSet.has(s.id)) folders.push('stories/' + s.folder);
     }
-  } catch (err) { return; }
+  } catch (err) { report('done', 0, 0, true); return; }
   if (skipSet.has('demo')) folders.shift();
 
+  // всего: тексты историй (по 2 файла на папку) + картинки + файлы приложения, которых ещё нет в памяти
+  let done = 0, total = folders.length * 2;
+  report('sync', 0, total);
   const files = new Set();
   for (const f of folders) {
     const dir = new URL(f + '/', base);
@@ -152,17 +170,26 @@ async function syncStories(skip) {
       try {
         const u = new URL(name, dir).href;
         const r = await fetch(u, { cache: 'no-cache' });
-        if (!r.ok) continue;
-        await cache.put(u, r.clone());
-        if (name === 'assets.json') for (const v of Object.values(await r.json())) files.add(new URL(v, dir).href);
+        if (r.ok) {
+          await cache.put(u, r.clone());
+          if (name === 'assets.json') for (const v of Object.values(await r.json())) files.add(new URL(v, dir).href);
+        }
       } catch (err) { /* дальше */ }
+      report('sync', ++done, total);
     }
   }
+  for (const u of SHELL) files.add(new URL(u, base).href);
+  total += files.size;
+  let failed = 0;
   for (const u of files) {
-    if (await cache.match(u, { ignoreVary: true })) continue;
-    try {
-      const r = await fetch(u);
-      if (r.ok && r.status === 200) await cache.put(u, r);
-    } catch (err) { /* без сети – в другой раз */ }
+    if (!(await cache.match(u, { ignoreVary: true }))) {
+      try {
+        const r = await fetch(u);
+        if (r.ok && r.status === 200) await cache.put(u, r); else failed++;
+      } catch (err) { failed++; /* без сети – в другой раз */ }
+    }
+    done++;
+    if (done % 4 === 0 || done === total) report('sync', done, total);
   }
+  report('done', done, total, failed > 0 && failed === files.size);
 }
