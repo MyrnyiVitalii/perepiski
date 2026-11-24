@@ -33,7 +33,14 @@ export function showTransition(text, onDark) {
       box.classList.add('out');
       setTimeout(() => { box.remove(); resolve(); }, 380);
     };
-    box.addEventListener('click', () => { if (onDark) { onDark(); onDark = null; } finish(); });
+    // Тап по чёрному экрану пропускает его, но не сразу: на телефоне тот же тап, который запустил переход,
+    // через мгновение «прилетает» сюда как click и закрывал затемнение раньше, чем его видно (баг 24.11.2026)
+    const shownAt = performance.now();
+    box.addEventListener('click', () => {
+      if (performance.now() - shownAt < 900) return;
+      if (onDark) { onDark(); onDark = null; }
+      finish();
+    });
     document.body.append(box);
     timers.push(setTimeout(() => { if (onDark) { onDark(); onDark = null; } }, 400));
     // длинный текст («За шесть часов до этого · Школьный автобус · 15:47») держим дольше, чтобы успели прочитать
