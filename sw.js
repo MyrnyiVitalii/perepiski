@@ -24,7 +24,8 @@ const SHELL = [
   'lang/ru.js', 'vendor/powerglitch/powerglitch.esm.js',
   'fonts/playfair-cyrillic.woff2', 'fonts/playfair-latin.woff2', 'fonts/oswald-cyrillic.woff2', 'fonts/oswald-latin.woff2',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
-  'sounds/telegram/sound_in.wav', 'sounds/telegram/sound_out.wav', 'sounds/telegram/msg_incoming.mp3',
+  'sounds/notify.mp3', 'sounds/send.mp3', 'sounds/push.mp3', 'sounds/typing.mp3', 'sounds/reaction.mp3', 'sounds/vibration.mp3', 'sounds/heart.mp3',
+  'sounds/knock.mp3', 'sounds/creak.mp3', 'sounds/steps.mp3', 'sounds/static.mp3', 'sounds/drone.mp3', 'sounds/hit.mp3', 'sounds/final.mp3', 'sounds/bell.mp3',
 ];
 
 const isText = (url) => url.pathname.endsWith('/') || /\.(html|js|mjs|css|json|txt)$/i.test(url.pathname);

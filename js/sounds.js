@@ -1,6 +1,6 @@
 // Звуки и вибрация.
-// Встроенные звуки не лежат файлами: телефон «рисует» их сам (Web Audio), поэтому они
-// работают без интернета и их можно спокойно использовать в видео на YouTube.
+// Основные звуки – файлы в sounds\ (FILE_SOUNDS ниже). Встроенные синтезированные звуки (SYNTH)
+// остались запасными: играют, если файла нет или он не загрузился.
 // Свои звуки (mp3, ogg, wav, m4a) можно загрузить в настройках, тогда [звук имя] играет их.
 import { settings } from './settings.js';
 import { db } from './storage.js';
@@ -162,11 +162,25 @@ const SYNTH = {
   },
 };
 
-// Звуки-файлы: настоящие звуки сообщений Telegram (из его открытого кода, см. sounds/telegram/ОТКУДА_ЗВУКИ.txt)
+// Звуки-файлы (выбор Виталика 24.11.2026, все с Pixabay, лицензия без указания автора – см. Звуки_на_выбор\ОТКУДА_ЗВУКИ.txt).
+// Варианты одного звука пишутся через дефис: [звук шаги-улица]. Если такого варианта нет – играет основной звук («шаги»).
+// Если файла нет совсем – играет встроенный синтезированный звук из SYNTH.
 const FILE_SOUNDS = {
-  'уведомление': 'sounds/telegram/sound_in.wav',   // пришло сообщение (чат открыт)
-  'отправка': 'sounds/telegram/sound_out.wav',     // отправлено
-  'пуш': 'sounds/telegram/msg_incoming.mp3',       // уведомление, как на компьютере
+  'уведомление': 'sounds/notify.mp3',   // пришло сообщение (чат открыт)
+  'отправка': 'sounds/send.mp3',        // Ира отправила
+  'пуш': 'sounds/push.mp3',             // уведомление, как на телефоне
+  'клавиатура': 'sounds/typing.mp3',
+  'реакция': 'sounds/reaction.mp3',
+  'вибрация': 'sounds/vibration.mp3',
+  'сердце': 'sounds/heart.mp3',
+  'стук': 'sounds/knock.mp3',
+  'скрип': 'sounds/creak.mp3',
+  'шаги': 'sounds/steps.mp3',
+  'помехи': 'sounds/static.mp3',
+  'гул': 'sounds/drone.mp3',
+  'удар': 'sounds/hit.mp3',
+  'финал': 'sounds/final.mp3',
+  'колокол': 'sounds/bell.mp3',
 };
 const fileBuffers = new Map();
 async function fileBuffer(name) {
@@ -208,8 +222,11 @@ export async function play(name, { auto = false } = {}) {
   if (auto && !settings.msgSounds) return;
   const a = ctx();
   if (!a) return;
-  if (!auto) vibrate(VIBRO[name]);
-  const buf = (await customBuffer(name)) || (await fileBuffer(name));
+  // вариант «шаги-улица»: если такого звука нет, берём основной «шаги»
+  const base = name.split('-')[0];
+  if (!auto) vibrate(VIBRO[name] || VIBRO[base]);
+  let buf = (await customBuffer(name)) || (await fileBuffer(name));
+  if (!buf && base !== name && !SYNTH[name]) { buf = (await customBuffer(base)) || (await fileBuffer(base)); name = base; }
   if (buf) {
     const s = a.createBufferSource();
     s.buffer = buf;
@@ -221,7 +238,7 @@ export async function play(name, { auto = false } = {}) {
   if (fn) fn(a.currentTime + 0.02);
 }
 
-// Заранее загрузить звуки Telegram, чтобы первый звук не опаздывал
+// Заранее загрузить звуки-файлы, чтобы первый звук не опаздывал
 export function preloadSounds() {
   if (!ctx()) return;
   Object.keys(FILE_SOUNDS).forEach((n) => fileBuffer(n));
