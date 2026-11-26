@@ -313,6 +313,9 @@ function parseSceneLine(line, ln, err) {
       if (pm) { msg.forwarded = pm[1]; body = body.slice(pm[0].length); continue; }
       pm = body.match(/^\[\s*изменено\s*\]\s*/i);
       if (pm) { msg.edited = true; body = body.slice(pm[0].length); continue; }
+      // [удалит] или [удалит 3] – сообщение видно N секунд (по умолчанию 2), потом на его месте «Сообщение удалено»
+      pm = body.match(/^\[\s*удалит(?:ь)?(?:\s+через)?(?:\s+(\d+(?:[.,]\d+)?))?\s*(?:с|сек)?\.?\s*\]\s*/i);
+      if (pm) { msg.vanish = pm[1] ? parseFloat(pm[1].replace(',', '.')) : 2; body = body.slice(pm[0].length); continue; }
       break;
     }
     msg.text = body;

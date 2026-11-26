@@ -121,6 +121,17 @@ export async function openChat(root, rec, { onExit, onNext }) {
 
   // ---------- Рисование сообщений ----------
   const rows = new Map();
+  // Сообщения с [удалит], которые ещё видны (идут их секунды); потом они превращаются в «Сообщение удалено»
+  const vanishing = new Set();
+  let justVanished = null;
+  // Пока сообщение с [удалит] ещё не удалилось, нажатия на чат не работают (следующее сообщение не появляется)
+  let vanishWait = null;
+  function vanishDone() {
+    if (vanishing.size || !vanishWait) return;
+    const r = vanishWait.resolve;
+    vanishWait = null;
+    r();
+  }
 
   function metaEl(item, read) {
     const m = h('span', { class: 'meta' },
@@ -281,8 +292,10 @@ export async function openChat(root, rec, { onExit, onNext }) {
       if (text) b.append(h('div', { class: 'caption text' }, rich(text, item.id), metaEl(item, read)));
       else b.append(metaEl(item, read));
       row.append(b);
-    } else if (item.kind === 'deleted') {
-      row.append(h('div', { class: 'bubble' }, nameEl, h('div', { class: 'text deleted' }, emo('🚫 ' + t('deleted')), metaEl(item, read))));
+    } else if (item.kind === 'deleted' || (item.vanish && !vanishing.has(item.id))) {
+      // [удалит] – пока идут секунды, видно сам текст; потом (и при любой перерисовке) – «Сообщение удалено»
+      const cls = 'text deleted' + (justVanished === item.id ? ' vanish-in' : '');
+      row.append(h('div', { class: 'bubble' }, nameEl, h('div', { class: cls }, emo('🚫 ' + t('deleted')), metaEl(item, read))));
     } else {
       row.append(h('div', { class: 'bubble' }, nameEl, fwdEl, qEl, h('div', { class: 'text' }, rich(text, item.id), metaEl(item, read))));
     }
@@ -563,6 +576,8 @@ export async function openChat(root, rec, { onExit, onNext }) {
   function renderAll() {
     gen += 1;
     cancelTyping();
+    vanishing.clear();
+    vanishDone();
     rows.clear();
     list.replaceChildren();
     titleEl.textContent = emo(story.chatTitle);
@@ -630,6 +645,18 @@ export async function openChat(root, rec, { onExit, onNext }) {
     }
     if (item.t === 'msg' && !item.me) {
       list.querySelectorAll('.row.out .tick').forEach((el) => { el.innerHTML = ICONS.tick2; });
+    }
+    if (item.t === 'msg' && item.vanish) {
+      // через N секунд сообщение само меняется на «Сообщение удалено» (как будто герой его удалил)
+      vanishing.add(item.id);
+      if (!vanishWait) { let r; const p = new Promise((res) => { r = res; }); vanishWait = { promise: p, resolve: r }; }
+      setTimeout(() => {
+        if (!vanishing.delete(item.id)) return;
+        justVanished = item.id;
+        redrawRow(item.id, false);
+        justVanished = null;
+        vanishDone();
+      }, item.vanish * 1000);
     }
     const el = renderItem(item, prev, null, false, true);
     if (el) list.append(el);
@@ -728,6 +755,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
         while (sc && k < sc.items.length && !['msg', 'date', 'system', 'choice', 'jump', 'end'].includes(sc.items[k].t)) { if (sc.items[k].t === 'transition') cut = true; k++; }
         const sceneEnds = cut || !sc || k >= sc.items.length || sc.items[k].t === 'jump';
         await pause(last && last.t === 'date' ? 1600 : sceneEnds ? 2500 : 1100);
+        if (vanishWait) await vanishWait.promise; // в хуке тоже ждём, пока сообщение с [удалит] удалится
         if (myGen !== gen) return;
         await onTap();
       }
@@ -800,6 +828,8 @@ export async function openChat(root, rec, { onExit, onNext }) {
   async function onTap(fromStart = false) {
     if (typing) { typing.done(); return; }
     if (busy) return;
+    // сообщение с [удалит] ещё не удалилось – нажатия не работают (просьба Виталика 26.11.2026)
+    if (vanishWait) return;
     const s = engine.state;
     if (s.ended !== null) return;
     if (isFresh() && !fromStart) { pulse(bottom.querySelector('.start-btn')); return; }
@@ -861,7 +891,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
   }
 
   function choose(i, typed) {
-    if (typing || busy) return;
+    if (typing || busy || vanishWait) return;
     const ctx = engine.choose(i, typed);
     if (!ctx) return;
     // если перед этим смахнули сообщение – мой ответ будет с цитатой

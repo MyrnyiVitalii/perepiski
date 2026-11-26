@@ -9,7 +9,7 @@ export function snippet(it) {
   if (it.kind === 'photo') return '🖼 ' + (it.text || 'Фото');
   if (it.kind === 'video') return '🎬 ' + (it.text || 'Видео');
   if (it.kind === 'sticker') return 'Стикер';
-  if (it.kind === 'deleted') return 'Сообщение удалено';
+  if (it.kind === 'deleted' || it.vanish) return 'Сообщение удалено';
   const s = (it.text || '').replace(/\|\|/g, '').replace(/\*\*|__|~~/g, '').replace(/\s+/g, ' ');
   return s.length > 60 ? s.slice(0, 57) + '…' : s;
 }
@@ -220,6 +220,7 @@ export class Engine {
         if (node.forwarded) item.forwarded = node.forwarded;
         if (node.hidden) item.hidden = node.hidden;
         if (node.edited) item.edited = true;
+        if (node.vanish) item.vanish = node.vanish;
         if (node.replyTo) {
           const r = this.lastMsg(node.replyTo === 'Я' ? this.story.me : node.replyTo);
           if (r) item.reply = r.id;

@@ -12,7 +12,7 @@ function lastText(log) {
     const who = it.me ? '' : it.who + ': ';
     if (it.kind === 'photo') return who + '🖼 ' + (it.text || t('photo'));
     if (it.kind === 'sticker') return who + t('sticker');
-    if (it.kind === 'deleted') return who + t('deleted');
+    if (it.kind === 'deleted' || it.vanish) return who + t('deleted');
     return who + it.text;
   }
   return '';
