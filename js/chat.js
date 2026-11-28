@@ -811,10 +811,26 @@ export async function openChat(root, rec, { onExit, onNext }) {
   function cancelTyping() { if (typing) typing.done(); }
 
   // ---------- Эффекты и надписи ----------
+  // Эффекты. Возвращает обещание: долгие эффекты («стук в экран», «темнота») держат экран, пока не закончатся
   function runEffects(names) {
+    const waits = [];
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const shake = () => { chat.classList.remove('fx-shake'); void chat.offsetWidth; chat.classList.add('fx-shake'); setTimeout(() => chat.classList.remove('fx-shake'), 600); };
     for (const n of names) {
       vibrateForEffect(n);
-      if (n.startsWith('тряс')) {
+      if (n.startsWith('стук-в-экран')) {
+        // концовка: три медленных удара, при каждом чат вздрагивает, потом тишина (просьба Виталика 28.11.2026)
+        waits.push((async () => {
+          for (let i = 0; i < 3; i++) { await sleep(i ? 1500 : 400); play('стук-медленно'); shake(); vibrate([140]); }
+          await sleep(1800);
+        })());
+      } else if (n.startsWith('темнот')) {
+        // экран медленно темнеет, виден только последний пузырь
+        const last = list.lastElementChild;
+        if (last) last.classList.add('fx-keep');
+        chat.classList.add('fx-dark');
+        waits.push(sleep(3000));
+      } else if (n.startsWith('тряс')) {
         chat.classList.remove('fx-shake'); void chat.offsetWidth; chat.classList.add('fx-shake');
         setTimeout(() => chat.classList.remove('fx-shake'), 600);
       } else if (n.startsWith('помех')) {
@@ -829,6 +845,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
         setTimeout(() => layer.remove(), 750);
       }
     }
+    return Promise.all(waits);
   }
 
   function showToasts(items) {
@@ -900,8 +917,9 @@ export async function openChat(root, rec, { onExit, onNext }) {
       }
       ctx.sounds.forEach((n) => play(n));
       ctx.vibro.forEach((p) => vibrate(p));
-      runEffects(ctx.effects);
       showToasts(ctx.toasts);
+      await runEffects(ctx.effects);
+      if (myGen !== gen) return;
       if (ctx.choice || s.ended !== null) renderBottom();
     } finally { busy = false; }
   }

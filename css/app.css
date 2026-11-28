@@ -682,3 +682,8 @@ button.back-to-choices svg { width: 24px; height: 24px; }
 .loadbar.warn { color: #f0c36a; }
 .loadbar.warn .lb-fill { background: #d9a440; }
 @keyframes lb-indet { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+
+/* Концовка: экран темнеет, виден только последний пузырь (эффект «темнота»). filter, а не opacity: у пузырей своя анимация появления */
+.chat .feed .row, .chat .feed .sys, .chat .top, .chat .bottom, .chat .pin-bar, .chat .scene-bg, .chat .chat-shade, .chat .chat-bg { transition: filter 2.6s ease; }
+.chat.fx-dark .feed .row:not(.fx-keep), .chat.fx-dark .feed .sys:not(.fx-keep), .chat.fx-dark .top, .chat.fx-dark .bottom, .chat.fx-dark .pin-bar,
+.chat.fx-dark .scene-bg, .chat.fx-dark .chat-shade, .chat.fx-dark .chat-bg { filter: brightness(.025); }
