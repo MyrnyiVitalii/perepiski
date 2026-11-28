@@ -148,4 +148,8 @@ function linkSeries(list) {
   }
 }
 
+// Экран не приближается: ни двумя пальцами (жест iPhone), ни двойным тапом (просьба Виталика 28.11.2026)
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('touchmove', (e) => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+
 start();

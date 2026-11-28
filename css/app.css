@@ -50,7 +50,7 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--in-text); }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--in-text); touch-action: pan-x pan-y; } /* без приближения двойным тапом и двумя пальцами (просьба Виталика 28.11.2026) */
 body {
   font-family: var(--font); font-size: var(--font-size); line-height: var(--line-height); font-weight: var(--font-weight);
   overflow: hidden; overscroll-behavior: none;
