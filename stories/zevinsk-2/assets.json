@@ -14,8 +14,6 @@
  "улица_ночью.jpg": "../zevinsk-common/street_night.jpg",
  "окно_тёмы.jpg": "../zevinsk-common/tema_window.jpg",
  "улица_днём.jpg": "../zevinsk-common/street_day.jpg",
- "автобус_1986.jpg": "../zevinsk-common/bus_1986.jpg",
- "бумажка_сони.jpg": "../zevinsk-common/sonya_note.jpg",
  "фон_автобус_день.jpg": "../zevinsk-common/bg_bus_day.jpg",
  "фон_автобус_погоня.jpg": "../zevinsk-common/bg_bus_chase.jpg",
  "фон_лес_тропинка.jpg": "../zevinsk-common/bg_forest_path.jpg",
@@ -24,8 +22,6 @@
  "фон_комната_ночь.jpg": "../zevinsk-common/bg_room_night.jpg",
  "фон_столовая_утро.jpg": "../zevinsk-common/bg_dining_morning.jpg",
  "фон_библиотека.jpg": "../zevinsk-common/bg_library.jpg",
- "фон_площадь_день.jpg": "../zevinsk-common/bg_square_day.jpg",
- "фон_коридор_ночь.jpg": "../zevinsk-common/bg_corridor_night.jpg",
  "знак_тёмы.jpg": "../zevinsk-common/tema_sign.jpg",
  "записка_2.jpg": "../zevinsk-common/note_2.jpg",
  "Соня.jpg": "../zevinsk-common/sonya.jpg"
