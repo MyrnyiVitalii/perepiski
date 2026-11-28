@@ -113,7 +113,26 @@ export async function openChat(root, rec, { onExit, onNext }) {
     sceneFront = back;
   }
 
-  const idleSub = () => (story.isGroup ? plural('members', story.charOrder.length) : '');
+  // Кто сейчас в чате. Герой, которого добавляют позже («[система Ира добавила Соню]», «[система «Житель» вступил(а) в чат]»),
+  // считается участником только после этой плашки; «покинул(а) чат» – вычитается (просьба Виталика 28.11.2026: в начале 5, Соня – шестая)
+  const sysTexts = [];
+  for (const k of story.sceneOrder) for (const it of story.scenes[k].items) {
+    const n = it.t === 'cond' ? it.node : it;
+    if (n && n.t === 'system') sysTexts.push(n.text);
+  }
+  const nameIn = (text, name) => text.includes(name) || (name.length > 3 && text.includes(name.slice(0, -1)));
+  const isJoin = (text, name) => (/добавил/i.test(text) || /вступил/i.test(text)) && nameIn(text, name);
+  const isLeave = (text, name) => /покинул|удалил/i.test(text) && nameIn(text, name);
+  const lateJoiners = new Set(story.charOrder.filter((n) => n !== story.me && sysTexts.some((t) => isJoin(t, n))));
+  function membersNow() {
+    const sys = engine.state.log.filter((x) => x.t === 'system').map((x) => x.text);
+    return story.charOrder.filter((n) => {
+      let inChat = !lateJoiners.has(n);
+      for (const t of sys) { if (isJoin(t, n)) inChat = true; else if (isLeave(t, n)) inChat = false; }
+      return inChat;
+    });
+  }
+  const idleSub = () => (story.isGroup ? plural('members', membersNow().length) : '');
   const setSub = (text, typing = false) => { subEl.textContent = text; subEl.classList.toggle('typing', typing); };
   setSub(idleSub());
 
@@ -518,10 +537,10 @@ export async function openChat(root, rec, { onExit, onNext }) {
     const box = h('div', { class: 'profile' },
       big,
       h('div', { class: 'p-name' }, emo(story.chatTitle)),
-      h('div', { class: 'p-sub' }, plural('members', story.charOrder.length)),
+      h('div', { class: 'p-sub' }, plural('members', membersNow().length)),
       story.description ? h('div', { class: 'p-section' }, h('div', { class: 'p-label' }, t('chatAbout')), emo(story.description)) : null,
       h('div', { class: 'p-section members' }, h('div', { class: 'p-label' }, t('membersTitle')),
-        ...story.charOrder.map((name) => {
+        ...membersNow().map((name) => {
           const c = char(name);
           return h('button', { type: 'button', class: 'member', onclick: () => { s.close(); openProfile(name); } },
             avaOf(name),
@@ -662,7 +681,7 @@ export async function openChat(root, rec, { onExit, onNext }) {
     if (el) list.append(el);
     if (item.t === 'msg') play(item.me ? 'отправка' : 'уведомление', { auto: true });
     if (item.t === 'end') { saveCarry(); play('финал'); }
-    if (item.t === 'system') drawPinBar();
+    if (item.t === 'system') { drawPinBar(); if (!subEl.classList.contains('typing')) setSub(idleSub()); }
     scrollDown(true);
   }
 
@@ -754,7 +773,9 @@ export async function openChat(root, rec, { onExit, onNext }) {
         let cut = false; // впереди затемнение – тоже пауза длиннее
         while (sc && k < sc.items.length && !['msg', 'date', 'system', 'choice', 'jump', 'end'].includes(sc.items[k].t)) { if (sc.items[k].t === 'transition') cut = true; k++; }
         const sceneEnds = cut || !sc || k >= sc.items.length || sc.items[k].t === 'jump';
-        await pause(last && last.t === 'date' ? 1600 : sceneEnds ? 2500 : 1100);
+        // хук кончился: дальше затемнение – ждём нажатия, чтобы успеть дочитать (просьба Виталика 28.11.2026)
+        if (sceneEnds) break;
+        await pause(last && last.t === 'date' ? 1600 : 1100);
         if (vanishWait) await vanishWait.promise; // в хуке тоже ждём, пока сообщение с [удалит] удалится
         if (myGen !== gen) return;
         await onTap();
