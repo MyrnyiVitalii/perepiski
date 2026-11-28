@@ -25,5 +25,6 @@
  "фон_столовая_утро.jpg": "../zevinsk-common/bg_dining_morning.jpg",
  "фон_библиотека.jpg": "../zevinsk-common/bg_library.jpg",
  "фон_площадь_день.jpg": "../zevinsk-common/bg_square_day.jpg",
- "фон_коридор_ночь.jpg": "../zevinsk-common/bg_corridor_night.jpg"
+ "фон_коридор_ночь.jpg": "../zevinsk-common/bg_corridor_night.jpg",
+ "знак_тёмы.jpg": "../zevinsk-common/tema_sign.jpg"
 }
